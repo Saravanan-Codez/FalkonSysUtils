@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ultimate System Cleaner Run Report">
+    <title>Ultimate System Cleaner Report - {{RUN_ID}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(20, 26, 46, 0.45);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-primary: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --success-color: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --font-family: 'Plus Jakarta Sans', sans-serif;
+            --header-font: 'Outfit', sans-serif;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f3f4f6;
+            --panel-bg: rgba(255, 255, 255, 0.7);
+            --panel-border: rgba(0, 0, 0, 0.06);
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --accent-primary: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.2);
+            --success-color: #059669;
+            --success-glow: rgba(5, 150, 105, 0.1);
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            padding: 40px 24px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Glassmorphism Panel styles */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .logo-section h1 {
+            font-family: var(--header-font);
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6, #1d4ed8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+
+        .logo-section p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .theme-toggle {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-primary);
+        }
+
+        /* Grid metrics cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 120px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-family: var(--header-font);
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .metric-subtext {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .accent-text {
+            color: var(--accent-primary);
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* Dashboard content layout */
+        .dashboard-body {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Tabs and Tables */
+        .tab-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 8px;
+        }
+
+        .tab-btn.active {
+            color: var(--text-primary);
+            background: var(--panel-border);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Tables style */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--panel-border);
+            vertical-align: middle;
+        }
+
+        th {
+            font-family: var(--header-font);
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Badges status */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .status-Succeeded {
+            background-color: var(--success-glow);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-Failed, .status-Critical {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-Skipped {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .status-PartiallySucceeded {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--accent-primary);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        /* SVG charts */
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 240px;
+            margin: 20px 0;
+        }
+
+        .system-specs-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .system-specs-list li {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 8px;
+        }
+
+        .system-specs-list li strong {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .system-specs-list li span {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Filters search */
+        .filter-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text-primary);
+            outline: none;
+            font-size: 13px;
+            width: 240px;
+        }
+
+        .search-box:focus {
+            border-color: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-section">
+                <h1>ULTIMATE SYSTEM CLEANER</h1>
+                <p>Execution Diagnostic & Audit Report</p>
+            </div>
+            <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle light/dark theme">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/></svg>
+                Toggle Theme
+            </button>
+        </header>
+
+        <!-- Metrics Section -->
+        <div class="metrics-grid">
+            <div class="glass-panel metric-card">
+                <span class="metric-label">Total Freed Space</span>
+                <span class="metric-value accent-text">{{TOTAL_FREED}}</span>
+                <span class="metric-subtext">Across scanned modules</span>
+            </div>
+            <div class="glass-panel metric-card">
+                <span class="metric-label">Execution Mode</span>
+                <span class="metric-value">{{RUN_MODE}}</span>
+                <span class="metric-subtext">Dry Run Mode: <strong>{{DRY_RUN}}</strong></span>
+            </div>
+            <div class="glass-panel metric-card">
+                <span class="metric-label">Run Identifier</span>
+                <span class="metric-value" style="font-size: 20px; line-height: 35px;">{{RUN_ID}}</span>
+                <span class="metric-subtext">Timestamp: {{TIME_STAMP}}</span>
+            </div>
+        </div>
+
+        <div class="dashboard-body">
+            <!-- Left Panel: Main content tabs -->
+            <div class="glass-panel">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab(event, 'results')">Cleanup Operations</button>
+                    <button class="tab-btn" onclick="switchTab(event, 'audit')">Audit Logs</button>
+                </div>
+
+                <div id="results" class="tab-content active">
+                    <div class="filter-controls">
+                        <input type="text" id="opSearch" class="search-box" placeholder="Filter operations..." onkeyup="filterTable('opTable', 'opSearch')">
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="opTable">
+                            <thead>
+                                <tr>
+                                    <th>Operation Name</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th>Freed Bytes</th>
+                                    <th>Detail Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{RESULTS_TABLE}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="audit" class="tab-content">
+                    <div class="filter-controls">
+                        <input type="text" id="logSearch" class="search-box" placeholder="Filter audit logs..." onkeyup="filterTable('logTable', 'logSearch')">
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="logTable">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Level</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{AUDIT_LOG_ROWS}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Side Stats & System specs -->
+            <div>
+                <div class="glass-panel">
+                    <h2 class="metric-label" style="margin-bottom: 16px;">Space Visualization</h2>
+                    <div class="chart-container">
+                        {{CHART_SVG}}
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <h2 class="metric-label" style="margin-bottom: 16px;">System Metadata</h2>
+                    <ul class="system-specs-list">
+                        {{SYSTEM_SPECS}}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme control
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const target = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', target);
+            localStorage.setItem('usc-theme', target);
+        }
+
+        // Apply saved theme
+        const savedTheme = localStorage.getItem('usc-theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Tab Switching
+        function switchTab(evt, tabId) {
+            const tabcontents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabcontents.length; i++) {
+                tabcontents[i].classList.remove("active");
+            }
+            const tablinks = document.getElementsByClassName("tab-btn");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(tabId).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // Basic table search/filter
+        function filterTable(tableId, inputId) {
+            const input = document.getElementById(inputId);
+            const filter = input.value.toUpperCase();
+            const table = document.getElementById(tableId);
+            const tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let display = false;
+                const tds = tr[i].getElementsByTagName("td");
+                for (let j = 0; j < tds.length; j++) {
+                    if (tds[j]) {
+                        const txtValue = tds[j].textContent || tds[j].innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            display = true;
+                            break;
+                        }
+                    }
+                }
+                tr[i].style.display = display ? "" : "none";
+            }
+        }
+    </script>
+</body>
+</html>

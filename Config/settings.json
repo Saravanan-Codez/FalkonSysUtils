@@ -1,0 +1,33 @@
+{
+  "Version": "3.0",
+  "LogDirectory": "%ProgramData%\\UltimateSystemCleaner\\Logs",
+  "ReportDirectory": "%ProgramData%\\UltimateSystemCleaner\\Reports",
+  "MaxRunspaces": 4,
+  "ConfirmNuclearActions": true,
+  "CreateRestorePoint": true,
+  "EnableStorageSenseIntegration": true,
+  "DryRunDefault": true,
+  "Exclusions": [
+    "%USERPROFILE%\\Downloads\\Keep",
+    "%ProgramData%\\Package Cache"
+  ],
+  "Safe": {
+    "Temp": true,
+    "RecycleBin": true,
+    "Thumbnails": true,
+    "BrowserCache": false
+  },
+  "Aggressive": {
+    "WindowsErrorReporting": true,
+    "WindowsUpdateCache": true,
+    "GpuShaderCache": true,
+    "BrowserCache": true
+  },
+  "Nuclear": {
+    "CrashDumps": true,
+    "ComponentStoreResetBase": false,
+    "DeleteShadowCopies": false,
+    "RemoveRestorePoints": false,
+    "PurgeUpdateRollback": false
+  }
+}
