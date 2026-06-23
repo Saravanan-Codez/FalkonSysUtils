@@ -326,8 +326,6 @@ function Show-UscMenu {
         Write-Host '[5] Run Nuclear Cleanup (Aggressive + restore/resetbase)' -ForegroundColor Red
         Write-Host '[6] Analyze SxS Component Store' -ForegroundColor Gray
         Write-Host '[7] Configure Settings (settings.json)' -ForegroundColor Cyan
-        Write-Host '[8] Local Code-Signing Utilities' -ForegroundColor Magenta
-        Write-Host '[9] Scheduled Task Management' -ForegroundColor Magenta
         Write-Host '[0] Exit' -ForegroundColor White
         Write-Host '==================================================' -ForegroundColor Cyan
         
@@ -346,8 +344,6 @@ function Show-UscMenu {
             }
             '6' { return @{ Mode = 'ComponentStore'; ConfirmNuclear = $false } }
             '7' { Show-UscConfigEditor -Config $Config }
-            '8' { Show-UscSigningHelper }
-            '9' { Show-UscScheduleHelper }
             '0' { return @{ Mode = 'Exit'; ConfirmNuclear = $false } }
             default { Write-Host 'Invalid choice, try again.'; Start-Sleep -Seconds 1 }
         }
