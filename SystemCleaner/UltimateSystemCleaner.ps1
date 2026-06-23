@@ -485,12 +485,12 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
         $dryRun = [bool]($WhatIfOnly -or $config.DryRunDefault)
 
         $choice = Show-UscMenu -Config $config
-        $mode = $choice.Mode
+        $mode = $choice['Mode']
         if ($mode -eq 'Exit') { break }
 
         $confirmedNuke = $false
         if ($choice.ContainsKey('ConfirmNuclear')) {
-            $confirmedNuke = [bool]$choice.ConfirmNuclear
+            $confirmedNuke = [bool]$choice['ConfirmNuclear']
         }
 
         Write-UscLog -Level Audit -Message 'Run started' -Data @{ Mode = $mode; WhatIfOnly = $dryRun; ConfigPath = $script:ConfigPath }
@@ -515,7 +515,8 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
                     Write-Host " - Other System : $(Format-UscBytes -Bytes $deepScan.Categories.SystemOther)"
                     Write-Host 'Top 10 Largest Files:' -ForegroundColor Yellow
                     $deepScan.TopFiles | ForEach-Object {
-                        Write-Host " - $(Format-UscBytes -Bytes $_.Size) : $($_.Path)"
+                        $fileUri = ([uri]$_.Path).AbsoluteUri
+                        Write-Host " - $(Format-UscBytes -Bytes $_.Size) : $fileUri"
                     }
                     Write-Host '==================================================' -ForegroundColor Cyan
                     $results.Add((New-UscOperationResult -Name 'Deep Space Analysis' -Category Analyze -Status Succeeded -Message "Scanned $($deepScan.TotalInspectedFiles) files"))
