@@ -554,9 +554,13 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
         Write-Host " Mode Executed  : $mode"
         Write-Host " Dry Run Status : $dryRun"
         Write-Host " Total Freed    : $(Format-UscBytes -Bytes $run.TotalBytesFreed)" -ForegroundColor Green
-        Write-Host " Log File Location: $logFile"
+        $logUri = ([uri]$logFile).AbsoluteUri
+        Write-Host " Log File Location: $logUri"
         Write-Host ' Reports Generated:'
-        $reportPaths | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
+        $reportPaths | ForEach-Object {
+            $reportUri = ([uri]$_).AbsoluteUri
+            Write-Host "  - $reportUri" -ForegroundColor Yellow
+        }
         Write-Host '==================================================' -ForegroundColor Cyan
         
         $null = Read-Host 'Press Enter to return to the main menu'
@@ -623,9 +627,13 @@ else {
     Write-Host " Mode Executed  : $mode"
     Write-Host " Dry Run Status : $dryRun"
     Write-Host " Total Freed    : $(Format-UscBytes -Bytes $run.TotalBytesFreed)" -ForegroundColor Green
-    Write-Host " Log File Location: $logFile"
+    $logUri = ([uri]$logFile).AbsoluteUri
+    Write-Host " Log File Location: $logUri"
     Write-Host ' Reports Generated:'
-    $reportPaths | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
+    $reportPaths | ForEach-Object {
+        $reportUri = ([uri]$_).AbsoluteUri
+        Write-Host "  - $reportUri" -ForegroundColor Yellow
+    }
     Write-Host '==================================================' -ForegroundColor Cyan
 
     [pscustomobject]@{
