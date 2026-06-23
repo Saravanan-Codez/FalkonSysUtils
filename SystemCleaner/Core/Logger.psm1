@@ -25,8 +25,8 @@ function Initialize-UscLogger {
     
     # Perform log rotation
     try {
-        $logFiles = Get-ChildItem -LiteralPath $LogDirectory -Filter 'UltimateSystemCleaner-*.log' -File | 
-            Sort-Object LastWriteTime -Descending
+        $logFiles = @(Get-ChildItem -LiteralPath $LogDirectory -Filter 'UltimateSystemCleaner-*.log' -File | 
+            Sort-Object LastWriteTime -Descending)
         if ($logFiles.Count -ge $MaxLogFiles) {
             $filesToDelete = $logFiles | Select-Object -Skip ($MaxLogFiles - 1)
             foreach ($file in $filesToDelete) {

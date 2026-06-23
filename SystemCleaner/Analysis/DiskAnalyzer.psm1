@@ -32,7 +32,7 @@ function Get-UscDirectorySize {
     if (-not (Test-Path -LiteralPath $Path)) { return @() }
 
     $root = Get-Item -LiteralPath $Path -Force
-    $children = if ($Depth -le 0) { @($root) } else { @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue) }
+    $children = @(if ($Depth -le 0) { $root } else { Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue })
     
     $results = [System.Collections.Generic.List[object]]::new()
     

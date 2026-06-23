@@ -8,12 +8,12 @@ function Invoke-UscGpuCacheCleanup {
     )
 
     $paths = @(
-        Join-Path $env:LOCALAPPDATA 'NVIDIA\DXCache',
-        Join-Path $env:LOCALAPPDATA 'NVIDIA\GLCache',
-        Join-Path $env:LOCALAPPDATA 'NVIDIA\ComputeCache',
-        Join-Path $env:LOCALAPPDATA 'AMD\DxCache',
-        Join-Path $env:LOCALAPPDATA 'Intel\ShaderCache',
-        Join-Path $env:LOCALAPPDATA 'D3DSCache'
+        (Join-Path $env:LOCALAPPDATA 'NVIDIA\DXCache')
+        (Join-Path $env:LOCALAPPDATA 'NVIDIA\GLCache')
+        (Join-Path $env:LOCALAPPDATA 'NVIDIA\ComputeCache')
+        (Join-Path $env:LOCALAPPDATA 'AMD\DxCache')
+        (Join-Path $env:LOCALAPPDATA 'Intel\ShaderCache')
+        (Join-Path $env:LOCALAPPDATA 'D3DSCache')
     )
 
     $results = [System.Collections.Generic.List[object]]::new()
@@ -44,7 +44,7 @@ function Invoke-UscGpuCacheCleanup {
                 Sort-Object { $_.FullName.Length } -Descending
             foreach ($dir in $subfolders) {
                 try {
-                    $contents = Get-ChildItem -LiteralPath $dir.FullName -Force -ErrorAction SilentlyContinue
+                    $contents = @(Get-ChildItem -LiteralPath $dir.FullName -Force -ErrorAction SilentlyContinue)
                     if ($contents.Count -eq 0) {
                         Remove-Item -LiteralPath $dir.FullName -Force -ErrorAction Stop
                     }

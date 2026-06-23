@@ -8,10 +8,10 @@ function Invoke-UscDumpCleanup {
     )
 
     $paths = @(
-        Join-Path $env:WINDIR 'MEMORY.DMP',
-        Join-Path $env:WINDIR 'Minidump',
-        Join-Path $env:WINDIR 'LiveKernelReports',
-        Join-Path $env:LOCALAPPDATA 'CrashDumps'
+        (Join-Path $env:WINDIR 'MEMORY.DMP')
+        (Join-Path $env:WINDIR 'Minidump')
+        (Join-Path $env:WINDIR 'LiveKernelReports')
+        (Join-Path $env:LOCALAPPDATA 'CrashDumps')
     )
 
     $results = [System.Collections.Generic.List[object]]::new()
@@ -21,12 +21,12 @@ function Invoke-UscDumpCleanup {
             continue
         }
         
-        $items = if ((Get-Item -LiteralPath $path).PSIsContainer) {
-            @(Get-ChildItem -LiteralPath $path -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer })
+        $items = @(if ((Get-Item -LiteralPath $path).PSIsContainer) {
+            Get-ChildItem -LiteralPath $path -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer }
         }
         else {
-            @(Get-Item -LiteralPath $path -Force)
-        }
+            Get-Item -LiteralPath $path -Force
+        })
         
         $size = Measure-UscObjectSum -InputObject $items -Property Length
         $failed = 0

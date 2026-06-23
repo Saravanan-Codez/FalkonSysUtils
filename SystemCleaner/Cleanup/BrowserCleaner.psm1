@@ -174,7 +174,7 @@ function Invoke-UscBrowserCacheCleanup {
                     Sort-Object { $_.FullName.Length } -Descending
                 foreach ($dir in $subDirs) {
                     try {
-                        $contents = Get-ChildItem -LiteralPath $dir.FullName -Force -ErrorAction SilentlyContinue
+                        $contents = @(Get-ChildItem -LiteralPath $dir.FullName -Force -ErrorAction SilentlyContinue)
                         if ($contents.Count -eq 0) {
                             Remove-Item -LiteralPath $dir.FullName -Force -ErrorAction Stop
                         }

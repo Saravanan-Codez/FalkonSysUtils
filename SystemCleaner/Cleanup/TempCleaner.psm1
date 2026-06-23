@@ -101,7 +101,7 @@ function Invoke-UscTempCleanup {
                     Sort-Object { $_.FullName.Length } -Descending
                 foreach ($folder in $folders) {
                     try {
-                        $subContents = Get-ChildItem -LiteralPath $folder.FullName -Force -ErrorAction SilentlyContinue
+                        $subContents = @(Get-ChildItem -LiteralPath $folder.FullName -Force -ErrorAction SilentlyContinue)
                         if ($subContents.Count -eq 0) {
                             Remove-Item -LiteralPath $folder.FullName -Force -ErrorAction Stop
                         }

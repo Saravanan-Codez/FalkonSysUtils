@@ -27,9 +27,9 @@ function Invoke-UscWerCleanup {
     )
 
     $paths = @(
-        Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportArchive',
-        Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportQueue',
-        Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\WER'
+        (Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportArchive')
+        (Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportQueue')
+        (Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\WER')
     )
 
     $results = [System.Collections.Generic.List[object]]::new()

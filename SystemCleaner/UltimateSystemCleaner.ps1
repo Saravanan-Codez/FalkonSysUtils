@@ -417,7 +417,7 @@ function Show-UscSigningHelper {
     }
     elseif ($choice -eq '2') {
         # Find a code signing cert in CurrentUser
-        $certs = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert -ErrorAction SilentlyContinue
+        $certs = @(Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert -ErrorAction SilentlyContinue)
         if ($certs.Count -eq 0) {
             Write-Host 'No code signing certificates found. Please run Option [1] first to generate one.' -ForegroundColor Red
             $null = Read-Host 'Press Enter to continue'
