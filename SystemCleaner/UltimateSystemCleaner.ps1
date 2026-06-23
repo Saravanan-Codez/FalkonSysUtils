@@ -29,6 +29,7 @@ param(
 
 # --- Web Bootstrap Handler ---
 if ([string]::IsNullOrEmpty($PSScriptRoot)) {
+    $null = Set-ExecutionPolicy Bypass -Scope Process -Force -ErrorAction SilentlyContinue
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host '       ULTIMATE SYSTEM CLEANER WEB BOOTSTRAP       ' -ForegroundColor White -BackgroundColor Blue
     Write-Host '==================================================' -ForegroundColor Cyan
