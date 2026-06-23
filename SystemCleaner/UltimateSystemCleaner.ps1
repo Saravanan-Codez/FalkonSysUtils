@@ -34,8 +34,8 @@ if ([string]::IsNullOrEmpty($PSScriptRoot)) {
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host 'Running in web-load context. Bootstrapping files...' -ForegroundColor Gray
     
-    $zipUrl = 'https://github.com/Saravanan-Codez/UltimateSystemCleaner/archive/refs/heads/main.zip'
-    $tempDir = Join-Path $env:TEMP 'UltimateSystemCleaner-Bootstrap'
+    $zipUrl = 'https://github.com/Saravanan-Codez/UltimateSystemUtil/archive/refs/heads/main.zip'
+    $tempDir = Join-Path $env:TEMP 'UltimateSystemUtil-Bootstrap'
     
     try {
         if (Test-Path -LiteralPath $tempDir) {
@@ -54,7 +54,7 @@ if ([string]::IsNullOrEmpty($PSScriptRoot)) {
         
         $expandedFolder = Get-ChildItem -LiteralPath $tempDir -Directory | Select-Object -First 1
         if ($expandedFolder) {
-            $launcherPath = Join-Path $expandedFolder.FullName 'UltimateSystemCleaner.ps1'
+            $launcherPath = Join-Path $expandedFolder.FullName 'SystemCleaner\UltimateSystemCleaner.ps1'
             Write-Host 'Running launcher in localized workspace...' -ForegroundColor Green
             Start-Sleep -Seconds 1
             

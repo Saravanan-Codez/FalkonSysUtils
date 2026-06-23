@@ -1,57 +1,57 @@
-# Ultimate System Cleaner
+# Ultimate System Utility (UltimateSystemUtil)
 
-A modular PowerShell cleanup project with Safe, Aggressive, and Nuclear modes, audit logging, dry-run defaults, reports, Storage Sense integration, component store analysis, scheduled task support, and conservative gating for destructive actions.
+A modular, production-grade PowerShell utility suite for Windows optimization, cleanup, and maintenance. 
 
-## Quick start
+## Structure
+- [UltimateSystemUtil.ps1](file:///d:/Falkon_labs/UltimateSystemUtil/UltimateSystemUtil.ps1): The root entry orchestrator displaying the main multi-tool utility menu.
+- [SystemCleaner/](file:///d:/Falkon_labs/UltimateSystemUtil/SystemCleaner/): The system cleanup utility with Safe, Aggressive, and Nuclear modes.
+- *Upcoming Utilities*: Registry Optimizer, Network Optimizer, and telemetry managers will be placed in dedicated subdirectories.
 
-Run from an elevated PowerShell session:
+---
 
+## Quick Start
+
+### Web Installer (Direct In-Memory Load)
+Run the following in an elevated PowerShell session to download, extract, and start the interactive suite in one command:
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\UltimateSystemCleaner.ps1 -Analyze
-.\UltimateSystemCleaner.ps1 -Safe -GenerateReport
-.\UltimateSystemCleaner.ps1 -Aggressive -WhatIfOnly
+irm https://raw.githubusercontent.com/Saravanan-Codez/UltimateSystemUtil/main/UltimateSystemUtil.ps1 | iex
 ```
 
-The default configuration sets `DryRunDefault` to `true`, so cleanup operations are simulated unless you disable that setting or explicitly adjust the config.
-
-## Nuclear mode
-
-Nuclear mode does not delete recovery options by default. To enable dangerous actions you must:
-
-1. Change the matching setting under `Config\settings.json`.
-2. Run `.\UltimateSystemCleaner.ps1 -Nuclear -ConfirmNuclear`.
-
-Actions such as `DISM /ResetBase`, deleting shadow copies, and removing restore points can permanently reduce rollback options.
-
-## Reports
-
-Runs generate JSON, CSV, and HTML reports in the configured `ReportDirectory`, defaulting to:
-
-```text
-%ProgramData%\UltimateSystemCleaner\Reports
-```
-
-Logs are JSON-lines audit records in:
-
-```text
-%ProgramData%\UltimateSystemCleaner\Logs
-```
-
-## Scheduled task
-
-Install or remove a weekly Safe-mode task:
-
+### Local CLI Execution
+Clone or extract the ZIP locally and invoke the root orchestrator:
 ```powershell
-.\UltimateSystemCleaner.ps1 -InstallScheduledTask
-.\UltimateSystemCleaner.ps1 -RemoveScheduledTask
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+# Launch interactive TUI suite
+.\UltimateSystemUtil.ps1
+
+# Direct CLI pass-through to System Cleaner
+.\UltimateSystemUtil.ps1 -Analyze
+.\UltimateSystemUtil.ps1 -Safe -GenerateReport
+.\UltimateSystemUtil.ps1 -Aggressive -WhatIfOnly
 ```
 
-## Digital signature
+---
 
-This project is signature-ready but not signed. Sign the launcher and modules with your own code-signing certificate:
+## Ultimate System Cleaner Features
 
+The default configuration sets `DryRunDefault` to `true`, meaning cleanup operations are safely simulated unless disabled in configurations or explicitly run.
+
+### Nuclear Mode Safeguards
+Nuclear mode deletes volume shadow copies, removes restore points, and runs `DISM /ResetBase`. Because these operations permanently remove rollback paths, they are dual-gated:
+1. Change `"ConfirmNuclearActions"` to `true` in `SystemCleaner/Config/settings.json`.
+2. Launch the execution with `-Nuclear -ConfirmNuclear` switches or confirm the prompt interactively.
+
+### Reports & Logs
+- **HTML/JSON/CSV Reports**: Written to `%ProgramData%\UltimateSystemCleaner\Reports`
+- **JSON-Lines Audit Logs**: Written to `%ProgramData%\UltimateSystemCleaner\Logs`
+
+### Scheduled Task Manager
+Install or remove a weekly automated task running the Safe cleanup utility:
 ```powershell
-$cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Select-Object -First 1
-Get-ChildItem . -Include *.ps1,*.psm1 -Recurse | Set-AuthenticodeSignature -Certificate $cert
+.\UltimateSystemUtil.ps1 -InstallScheduledTask
+.\UltimateSystemUtil.ps1 -RemoveScheduledTask
 ```
+
+### Digital Signatures & Audit
+The utility contains local code-signing modules. You can generate a self-signed certificate and sign all module files directly through the **Local Code-Signing Utilities** menu option (Option `8`) in the System Cleaner TUI interface.
