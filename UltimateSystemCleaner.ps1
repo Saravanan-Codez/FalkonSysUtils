@@ -29,13 +29,13 @@ param(
 
 # --- Web Bootstrap Handler ---
 if ([string]::IsNullOrEmpty($PSScriptRoot)) {
-    Write-Host "==================================================" -ForegroundColor Cyan
-    Write-Host "       ULTIMATE SYSTEM CLEANER WEB BOOTSTRAP       " -ForegroundColor White -BackgroundColor Blue
-    Write-Host "==================================================" -ForegroundColor Cyan
-    Write-Host "Running in web-load context. Bootstrapping files..." -ForegroundColor Gray
+    Write-Host '==================================================' -ForegroundColor Cyan
+    Write-Host '       ULTIMATE SYSTEM CLEANER WEB BOOTSTRAP       ' -ForegroundColor White -BackgroundColor Blue
+    Write-Host '==================================================' -ForegroundColor Cyan
+    Write-Host 'Running in web-load context. Bootstrapping files...' -ForegroundColor Gray
     
-    $zipUrl = "https://github.com/Saravanan-Codez/UltimateSystemCleaner/archive/refs/heads/main.zip"
-    $tempDir = Join-Path $env:TEMP "UltimateSystemCleaner-Bootstrap"
+    $zipUrl = 'https://github.com/Saravanan-Codez/UltimateSystemCleaner/archive/refs/heads/main.zip'
+    $tempDir = Join-Path $env:TEMP 'UltimateSystemCleaner-Bootstrap'
     
     try {
         if (Test-Path -LiteralPath $tempDir) {
@@ -43,19 +43,19 @@ if ([string]::IsNullOrEmpty($PSScriptRoot)) {
         }
         New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
         
-        $zipFile = Join-Path $tempDir "repo.zip"
-        Write-Host "Downloading repository package from GitHub..." -ForegroundColor Gray
+        $zipFile = Join-Path $tempDir 'repo.zip'
+        Write-Host 'Downloading repository package from GitHub...' -ForegroundColor Gray
         
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-RestMethod -Uri $zipUrl -OutFile $zipFile -ErrorAction Stop
         
-        Write-Host "Extracting files to temp workspace..." -ForegroundColor Gray
+        Write-Host 'Extracting files to temp workspace...' -ForegroundColor Gray
         Expand-Archive -Path $zipFile -DestinationPath $tempDir -Force -ErrorAction Stop
         
         $expandedFolder = Get-ChildItem -LiteralPath $tempDir -Directory | Select-Object -First 1
         if ($expandedFolder) {
-            $launcherPath = Join-Path $expandedFolder.FullName "UltimateSystemCleaner.ps1"
-            Write-Host "Running launcher in localized workspace..." -ForegroundColor Green
+            $launcherPath = Join-Path $expandedFolder.FullName 'UltimateSystemCleaner.ps1'
+            Write-Host 'Running launcher in localized workspace...' -ForegroundColor Green
             Start-Sleep -Seconds 1
             
             $boundArgs = @{}
@@ -68,11 +68,12 @@ if ([string]::IsNullOrEmpty($PSScriptRoot)) {
             & $launcherPath @boundArgs
         }
         else {
-            Write-Error "Failed to locate extracted launcher files in temp directory."
+            Write-Error 'Failed to locate extracted launcher files in temp directory.'
         }
     }
     catch {
-        Write-Error "Web bootstrap failed: $($_.Exception.Message)"
+        $errorMessage = $_.Exception.Message
+        Write-Error "Web bootstrap failed: $errorMessage"
     }
     return
 }
