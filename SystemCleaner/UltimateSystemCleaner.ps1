@@ -498,20 +498,58 @@ function Show-UscConfigEditor {
 
     while ($true) {
         Clear-Host
-        Show-UscLogo
+        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
         Write-Host '             CONFIGURATION SETTINGS               ' -ForegroundColor White -BackgroundColor Blue
         Write-Host '==================================================' -ForegroundColor Cyan
+        Write-Host '[1] Global Framework Options (Dry Run, Safety, etc.)'
+        Write-Host '[2] Safe Mode Target Cleaners'
+        Write-Host '[3] Aggressive Mode Target Cleaners'
+        Write-Host '[4] Nuclear Mode Target Cleaners'
+        Write-Host '[5] View Exclusion Folders & Files'
+        Write-Host '[6] Reset to Recommended Default Settings' -ForegroundColor Yellow
+        Write-Host '[7] Save Configuration & Exit Editor' -ForegroundColor Green
+        Write-Host '==================================================' -ForegroundColor Cyan
+        $choice = Read-Host 'Selection'
+        switch ($choice) {
+            '1' { Show-UscConfigGlobal -Config $Config }
+            '2' { Show-UscConfigSafe -Config $Config }
+            '3' { Show-UscConfigAggressive -Config $Config }
+            '4' { Show-UscConfigNuclear -Config $Config }
+            '5' { 
+                Write-Host 'Exclusions:'
+                $Config.Exclusions | ForEach-Object { Write-Host " - $_" -ForegroundColor Yellow }
+                $null = Read-Host 'Press Enter to continue'
+            }
+            '6' {
+                $defaults = Get-UscDefaultConfig
+                foreach ($prop in $defaults.psobject.Properties) {
+                    $Config.($prop.Name) = $prop.Value
+                }
+                Write-Host 'Configuration reset to default settings.' -ForegroundColor Green
+                Start-Sleep -Seconds 1
+            }
+            '7' { 
+                Save-UscConfig -Config $Config -Path $script:ConfigPath
+                Write-Host 'Settings saved successfully.' -ForegroundColor Green
+                Start-Sleep -Seconds 1
+                return
+            }
+        }
+    }
+}
+
+function Show-UscConfigGlobal {
+    param([psobject]$Config)
+    while ($true) {
+        Clear-Host
+        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
+        Write-Host '            GLOBAL FRAMEWORK OPTIONS              ' -ForegroundColor White -BackgroundColor Blue
+        Write-Host '==================================================' -ForegroundColor Cyan
         Write-Host "[1] Toggle DryRunDefault          : $($Config.DryRunDefault)"
-        Write-Host "    -> If enabled, runs actions in read-only analysis mode first." -ForegroundColor Gray
         Write-Host "[2] Toggle CreateRestorePoint     : $($Config.CreateRestorePoint)"
-        Write-Host "    -> Creates a system checkpoint before running cleanups." -ForegroundColor Gray
         Write-Host "[3] Toggle ConfirmNuclearActions  : $($Config.ConfirmNuclearActions)"
-        Write-Host "    -> Prompts for confirmation before running destructive steps." -ForegroundColor Gray
         Write-Host "[4] Toggle Storage Sense Support  : $($Config.EnableStorageSenseIntegration)"
-        Write-Host "    -> Integrates with native Windows disk cleanup automation." -ForegroundColor Gray
-        Write-Host '[5] Show Config Exclusions'
-        Write-Host '    -> Lists directories and files that will be skipped.' -ForegroundColor Gray
-        Write-Host '[6] Save Exclusions & Back to Menu'
+        Write-Host '[5] Back to Settings Menu'
         Write-Host '==================================================' -ForegroundColor Cyan
         $choice = Read-Host 'Selection'
         switch ($choice) {
@@ -519,17 +557,87 @@ function Show-UscConfigEditor {
             '2' { $Config.CreateRestorePoint = -not $Config.CreateRestorePoint }
             '3' { $Config.ConfirmNuclearActions = -not $Config.ConfirmNuclearActions }
             '4' { $Config.EnableStorageSenseIntegration = -not $Config.EnableStorageSenseIntegration }
-            '5' { 
-                Write-Host 'Exclusions:'
-                $Config.Exclusions | ForEach-Object { Write-Host " - $_" -ForegroundColor Yellow }
-                $null = Read-Host 'Press Enter to continue'
-            }
-            '6' { 
-                Save-UscConfig -Config $Config -Path $script:ConfigPath
-                Write-Host 'Settings saved successfully.' -ForegroundColor Green
-                Start-Sleep -Seconds 1
-                return
-            }
+            '5' { return }
+        }
+    }
+}
+
+function Show-UscConfigSafe {
+    param([psobject]$Config)
+    while ($true) {
+        Clear-Host
+        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
+        Write-Host '            SAFE CLEANER CONFIGURATION            ' -ForegroundColor White -BackgroundColor Blue
+        Write-Host '==================================================' -ForegroundColor Cyan
+        Write-Host "[1] Toggle Temp Directories       : $($Config.Safe.Temp)"
+        Write-Host "[2] Toggle Recycle Bin Clear      : $($Config.Safe.RecycleBin)"
+        Write-Host "[3] Toggle Windows Thumbnails     : $($Config.Safe.Thumbnails)"
+        Write-Host "[4] Toggle Browser Cache Clear    : $($Config.Safe.BrowserCache)"
+        Write-Host '[5] Back to Settings Menu'
+        Write-Host '==================================================' -ForegroundColor Cyan
+        $choice = Read-Host 'Selection'
+        switch ($choice) {
+            '1' { $Config.Safe.Temp = -not $Config.Safe.Temp }
+            '2' { $Config.Safe.RecycleBin = -not $Config.Safe.RecycleBin }
+            '3' { $Config.Safe.Thumbnails = -not $Config.Safe.Thumbnails }
+            '4' { $Config.Safe.BrowserCache = -not $Config.Safe.BrowserCache }
+            '5' { return }
+        }
+    }
+}
+
+function Show-UscConfigAggressive {
+    param([psobject]$Config)
+    while ($true) {
+        Clear-Host
+        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
+        Write-Host '         AGGRESSIVE CLEANER CONFIGURATION         ' -ForegroundColor White -BackgroundColor Blue
+        Write-Host '==================================================' -ForegroundColor Cyan
+        Write-Host "[1] Toggle Windows Error Rep.     : $($Config.Aggressive.WindowsErrorReporting)"
+        Write-Host "[2] Toggle Windows Update Cache   : $($Config.Aggressive.WindowsUpdateCache)"
+        Write-Host "[3] Toggle GPU Shader Cache       : $($Config.Aggressive.GpuShaderCache)"
+        Write-Host "[4] Toggle Browser Cache Clear    : $($Config.Aggressive.BrowserCache)"
+        Write-Host "[5] Toggle DNS Cache Flush        : $($Config.Aggressive.DnsFlush)"
+        Write-Host "[6] Toggle Windows Font Cache     : $($Config.Aggressive.FontCache)"
+        Write-Host "[7] Toggle Delivery Optimization  : $($Config.Aggressive.DeliveryOptimization)"
+        Write-Host '[8] Back to Settings Menu'
+        Write-Host '==================================================' -ForegroundColor Cyan
+        $choice = Read-Host 'Selection'
+        switch ($choice) {
+            '1' { $Config.Aggressive.WindowsErrorReporting = -not $Config.Aggressive.WindowsErrorReporting }
+            '2' { $Config.Aggressive.WindowsUpdateCache = -not $Config.Aggressive.WindowsUpdateCache }
+            '3' { $Config.Aggressive.GpuShaderCache = -not $Config.Aggressive.GpuShaderCache }
+            '4' { $Config.Aggressive.BrowserCache = -not $Config.Aggressive.BrowserCache }
+            '5' { $Config.Aggressive.DnsFlush = -not $Config.Aggressive.DnsFlush }
+            '6' { $Config.Aggressive.FontCache = -not $Config.Aggressive.FontCache }
+            '7' { $Config.Aggressive.DeliveryOptimization = -not $Config.Aggressive.DeliveryOptimization }
+            '8' { return }
+        }
+    }
+}
+
+function Show-UscConfigNuclear {
+    param([psobject]$Config)
+    while ($true) {
+        Clear-Host
+        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
+        Write-Host '          NUCLEAR CLEANER CONFIGURATION           ' -ForegroundColor White -BackgroundColor Blue
+        Write-Host '==================================================' -ForegroundColor Cyan
+        Write-Host "[1] Toggle System Crash Dumps     : $($Config.Nuclear.CrashDumps)"
+        Write-Host "[2] Toggle WinSxS ResetBase       : $($Config.Nuclear.ComponentStoreResetBase)"
+        Write-Host "[3] Toggle Delete Shadow Copies   : $($Config.Nuclear.DeleteShadowCopies)"
+        Write-Host "[4] Toggle Remove Restore Points  : $($Config.Nuclear.RemoveRestorePoints)"
+        Write-Host "[5] Toggle Purge Update Rollbacks : $($Config.Nuclear.PurgeUpdateRollback)"
+        Write-Host '[6] Back to Settings Menu'
+        Write-Host '==================================================' -ForegroundColor Cyan
+        $choice = Read-Host 'Selection'
+        switch ($choice) {
+            '1' { $Config.Nuclear.CrashDumps = -not $Config.Nuclear.CrashDumps }
+            '2' { $Config.Nuclear.ComponentStoreResetBase = -not $Config.Nuclear.ComponentStoreResetBase }
+            '3' { $Config.Nuclear.DeleteShadowCopies = -not $Config.Nuclear.DeleteShadowCopies }
+            '4' { $Config.Nuclear.RemoveRestorePoints = -not $Config.Nuclear.RemoveRestorePoints }
+            '5' { $Config.Nuclear.PurgeUpdateRollback = -not $Config.Nuclear.PurgeUpdateRollback }
+            '6' { return }
         }
     }
 }

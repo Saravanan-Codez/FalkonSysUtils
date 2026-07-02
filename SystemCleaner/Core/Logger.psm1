@@ -167,6 +167,11 @@ function Write-UscOperationConsole {
         [switch]$WhatIfOnly
     )
 
+    # Clear active console progress line to prevent overlapping characters
+    if ([Environment]::UserInteractive) {
+        Write-Host ("`r" + (' ' * 110) + "`r") -NoNewline
+    }
+
     $icon = switch ($Result.Status) {
         'Succeeded' { '[OK]' }
         'PartiallySucceeded' { '[!!]' }

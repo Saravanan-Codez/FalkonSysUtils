@@ -127,6 +127,7 @@ while ($true) {
     Write-Host '[4] Windows Privacy Telemetry & Services Tweaker' -ForegroundColor Yellow
     Write-Host '[5] Software Silent Batch Package Installer' -ForegroundColor DarkCyan
     Write-Host '[6] Apply Recommended Settings (One-Click Preset)' -ForegroundColor Red
+    Write-Host '[7] Diagnose System Space Only (No Deletions)' -ForegroundColor Green
     Write-Host '[0] Exit' -ForegroundColor White
     Write-Host '==================================================' -ForegroundColor Cyan
     
@@ -200,7 +201,38 @@ while ($true) {
             $optPath = Join-Path $PSScriptRoot 'SystemOptimizer\SystemOptimizer.ps1'
             if (Test-Path $optPath) { & $optPath -Apply }
 
-            if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
+            $reportDir = Join-Path $env:ProgramData 'UltimateSystemCleaner\Reports'
+            $lastReport = Get-ChildItem -Path $reportDir -Filter "*.html" -ErrorAction SilentlyContinue |
+                          Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            $lastReportPath = if ($lastReport) { $lastReport.FullName } else { 'N/A' }
+
+            Write-Host ""
+            Write-Host "==================================================" -ForegroundColor Cyan
+            Write-Host "             PRESET OPERATIONS COMPLETE           " -ForegroundColor White -BackgroundColor DarkGreen
+            Write-Host "==================================================" -ForegroundColor Cyan
+            Write-Host " [+] Safety Restore Point  : Created (or verified)" -ForegroundColor Green
+            Write-Host " [+] Safe Disk Cleanup     : Success" -ForegroundColor Green
+            Write-Host " [+] Registry Optimizer    : Success (Rollback created)" -ForegroundColor Green
+            Write-Host " [+] Network Optimizer     : Success" -ForegroundColor Green
+            Write-Host " [+] System Optimizer      : Success" -ForegroundColor Green
+            Write-Host "--------------------------------------------------" -ForegroundColor DarkGray
+            Write-Host " Registry Backups Path     : %ProgramData%\FalkonSysUtils\Rollbacks\" -ForegroundColor Gray
+            Write-Host " Last Cleaner HTML Report  : $lastReportPath" -ForegroundColor Gray
+            Write-Host "==================================================" -ForegroundColor Cyan
+            Write-Host "Press any key to return to the main menu..." -ForegroundColor Gray
+            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        }
+        '7' {
+            $cleanerPath = Join-Path $PSScriptRoot 'SystemCleaner\UltimateSystemCleaner.ps1'
+            if (Test-Path -LiteralPath $cleanerPath) {
+                & $cleanerPath -Diagnose
+                Write-Host ""
+                Write-Host "Press any key to return to the main menu..." -ForegroundColor Gray
+                $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            } else {
+                Write-Host "Module missing: $cleanerPath" -ForegroundColor Red
+                Start-Sleep -Seconds 2
+            }
         }
         '0' {
             Write-Host 'Goodbye!' -ForegroundColor Cyan

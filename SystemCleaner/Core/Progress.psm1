@@ -53,7 +53,7 @@ function Update-UscProgress {
     Write-Progress -Id $Id -ParentId $ParentId -Activity $Activity -Status $displayStatus -PercentComplete $bounded
 
     # Render our custom flapping falkon mascot
-    Update-UscConsoleProgress -Activity $Activity -Status $Status -PercentComplete $bounded
+    Update-UscConsoleProgress -Activity $Activity -Status $displayStatus -PercentComplete $bounded
 }
 
 function Complete-UscProgress {
