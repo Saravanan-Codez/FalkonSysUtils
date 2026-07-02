@@ -31,12 +31,12 @@ param(
 if ([string]::IsNullOrEmpty($PSScriptRoot)) {
     $null = Set-ExecutionPolicy Bypass -Scope Process -Force -ErrorAction SilentlyContinue
     Write-Host '==================================================' -ForegroundColor Cyan
-    Write-Host '       ULTIMATE SYSTEM CLEANER WEB BOOTSTRAP       ' -ForegroundColor White -BackgroundColor Blue
+    Write-Host '       FALKON SYSTEM CLEANER WEB BOOTSTRAP         ' -ForegroundColor White -BackgroundColor Blue
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host 'Running in web-load context. Bootstrapping files...' -ForegroundColor Gray
     
-    $zipUrl = 'https://github.com/Saravanan-Codez/UltimateSystemUtil/archive/refs/heads/main.zip'
-    $tempDir = Join-Path $env:TEMP 'UltimateSystemUtil-Bootstrap'
+    $zipUrl = 'https://github.com/Saravanan-Codez/FalkonSysUtils/archive/refs/heads/main.zip'
+    $tempDir = Join-Path $env:TEMP 'FalkonSysUtils-Bootstrap'
     
     try {
         if (Test-Path -LiteralPath $tempDir) {

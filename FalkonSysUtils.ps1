@@ -28,12 +28,12 @@ param(
 if ([string]::IsNullOrEmpty($PSScriptRoot)) {
     $null = Set-ExecutionPolicy Bypass -Scope Process -Force -ErrorAction SilentlyContinue
     Write-Host '==================================================' -ForegroundColor Cyan
-    Write-Host '       ULTIMATE SYSTEM UTILITY WEB BOOTSTRAP       ' -ForegroundColor White -BackgroundColor Blue
+    Write-Host '       FALKON SYSTEM UTILITIES WEB BOOTSTRAP       ' -ForegroundColor White -BackgroundColor Blue
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host 'Running in web-load context. Bootstrapping files...' -ForegroundColor Gray
     
-    $zipUrl = 'https://github.com/Saravanan-Codez/UltimateSystemUtil/archive/refs/heads/main.zip'
-    $tempDir = Join-Path $env:TEMP 'UltimateSystemUtil-Bootstrap'
+    $zipUrl = 'https://github.com/Saravanan-Codez/FalkonSysUtils/archive/refs/heads/main.zip'
+    $tempDir = Join-Path $env:TEMP 'FalkonSysUtils-Bootstrap'
     
     try {
         if (Test-Path -LiteralPath $tempDir) {
@@ -52,7 +52,7 @@ if ([string]::IsNullOrEmpty($PSScriptRoot)) {
         
         $expandedFolder = Get-ChildItem -LiteralPath $tempDir -Directory | Select-Object -First 1
         if ($expandedFolder) {
-            $launcherPath = Join-Path $expandedFolder.FullName 'UltimateSystemUtil.ps1'
+            $launcherPath = Join-Path $expandedFolder.FullName 'FalkonSysUtils.ps1'
             Write-Host 'Running launcher in localized workspace...' -ForegroundColor Green
             Start-Sleep -Seconds 1
             
@@ -92,7 +92,7 @@ function Show-UscLogo {
     Write-Host '  ====\        /     \     | __|/ \ | |   | |/ / /   \ | \ | |' -ForegroundColor Magenta
     Write-Host ' ======\______/   _   \    | _|/ _ \| |__ |   <  | () | |  \| |' -ForegroundColor DarkMagenta
     Write-Host ' =======_        //\   >   |_|/_/ \_\____||_|\_\ \___/ |_|\___|' -ForegroundColor DarkMagenta
-    Write-Host '  ======/       //  \_/    F A L K O N   S Y S T E M   U T I L' -ForegroundColor Cyan
+    Write-Host '  ======/       //  \_/    F A L K O N   S Y S   U T I L S' -ForegroundColor Cyan
     Write-Host '    ===/_______//' -ForegroundColor Cyan
     Write-Host '==================================================' -ForegroundColor Cyan
 }
@@ -123,9 +123,9 @@ while ($true) {
     Show-UscLogo
     Write-Host " Privilege Context : $adminStatus" -ForegroundColor Yellow
     Write-Host '--------------------------------------------------' -ForegroundColor Cyan
-    Write-Host '[1] Run Ultimate System Cleaner' -ForegroundColor Green
-    Write-Host '[2] Ultimate Registry Optimizer (Coming Soon)' -ForegroundColor Gray
-    Write-Host '[3] Ultimate Network Optimizer (Coming Soon)' -ForegroundColor Gray
+    Write-Host '[1] Run Falkon System Cleaner' -ForegroundColor Green
+    Write-Host '[2] Registry Optimizer (Coming Soon)' -ForegroundColor Gray
+    Write-Host '[3] Network Optimizer (Coming Soon)' -ForegroundColor Gray
     Write-Host '[0] Exit' -ForegroundColor White
     Write-Host '==================================================' -ForegroundColor Cyan
     
