@@ -73,8 +73,8 @@ if ([string]::IsNullOrEmpty($PSScriptRoot)) {
     return
 }
 
-# Unblock downloaded script files to support manual ZIP downloads
-Get-ChildItem -LiteralPath $PSScriptRoot -Include *.ps1,*.psm1 -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
+# Unblock downloaded script files to support manual ZIP downloads (excluding community Plugins)
+Get-ChildItem -LiteralPath $PSScriptRoot -Include *.ps1,*.psm1 -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike "*\Plugins\*" } | Unblock-File -ErrorAction SilentlyContinue
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -162,6 +162,20 @@ while ($true) {
             else { Write-Host "Module missing: $appPath" -ForegroundColor Red; Start-Sleep -Seconds 2 }
         }
         '6' {
+            if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "PRESET VERIFICATION" } else { Clear-Host }
+            Write-Host "[!] WARNING: You are about to apply the Recommended Settings preset." -ForegroundColor Yellow
+            Write-Host "This preset combines two distinct risk-level operations:" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host " 1. Disk Cleanup (SAFE) - Deletes temp folders, recycle bin items, logs." -ForegroundColor Green
+            Write-Host " 2. System Tweaks (INVASIVE) - Telemetry disable, network TCP tuning, registry optimizer." -ForegroundColor Red
+            Write-Host ""
+            $pConfirm = Read-Host "Are you sure you want to apply all recommended tweaks? (y/N)"
+            if ($pConfirm -notmatch '^[yY]') {
+                Write-Host "[*] Preset canceled." -ForegroundColor Yellow
+                Start-Sleep -Seconds 1
+                continue
+            }
+
             if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING PRESET" } else { Clear-Host }
             
             # 1. Safety Net Restore Point
@@ -204,7 +218,7 @@ while ($true) {
                 $plugins = Get-FalkonPlugins
                 if ($plugins.Count -eq 0) {
                     Write-Host "[!] No custom plugins found in the 'Plugins' folder." -ForegroundColor Yellow
-                    Write-Host "    Place your custom .ps1 scripts inside: D:\Falkon_labs\UltimateSystemUtil\Plugins\" -ForegroundColor Gray
+                    Write-Host ("    Place your custom .ps1 scripts inside: {0}" -f (Join-Path $PSScriptRoot "Plugins")) -ForegroundColor Gray
                     if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
                     break
                 }
@@ -226,7 +240,17 @@ while ($true) {
                     $index = [int]$pChoice - 1
                     if ($index -ge 0 -and $index -lt $plugins.Count) {
                         if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "RUNNING PLUGIN" } else { Clear-Host }
-                        Invoke-FalkonPlugin -Plugin $plugins[$index]
+                        Write-Host "[!] WARNING: You are about to execute a custom community plugin:" -ForegroundColor Red
+                        Write-Host "    Name: $($plugins[$index].Name)" -ForegroundColor Yellow
+                        Write-Host "    Path: $($plugins[$index].Path)" -ForegroundColor Yellow
+                        Write-Host "    Description: $($plugins[$index].Description)" -ForegroundColor Gray
+                        Write-Host "==================================================" -ForegroundColor Cyan
+                        $pConfirm = Read-Host "Are you sure you want to trust and run this plugin? (y/N)"
+                        if ($pConfirm -match '^[yY]') {
+                            Invoke-FalkonPlugin -Plugin $plugins[$index]
+                        } else {
+                            Write-Host "[*] Execution canceled." -ForegroundColor Yellow
+                        }
                         if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
                     }
                 }

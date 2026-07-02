@@ -11,9 +11,16 @@ function Invoke-FalkonSafetyNet {
         Write-Host "[+] System Restore Point Created Successfully." -ForegroundColor Green
     }
     catch {
-        Write-Host "[!] Could not create restore point (it may have been created recently or system protection is off in group policy). Proceeding anyway." -ForegroundColor DarkYellow
+        Write-Host "[!] WARNING: Could not create restore point (Windows rate-limits checkpoints to 1 per 24 hours, or System Protection is disabled)." -ForegroundColor Red
+        if ($Host.UI -ne $null -and ($Host.Name -eq 'ConsoleHost' -or $Host.Name -eq 'Visual Studio Code Host')) {
+            $confirm = Read-Host "Registry/System optimizations will run without rollback protection. Proceed anyway? (y/N)"
+            if ($confirm -notmatch '^[yY]') {
+                throw "Execution aborted: restore point generation failed and user chose not to bypass safety checkpoint."
+            }
+        } else {
+            Write-Warning "Non-interactive context. Proceeding without restore point rollback capability."
+        }
     }
-    Start-Sleep -Seconds 1
 }
 
 Export-ModuleMember -Function Invoke-FalkonSafetyNet

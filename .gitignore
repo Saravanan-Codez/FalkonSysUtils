@@ -1,0 +1,29 @@
+# Windows System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.suo
+
+# Local Logs & Reports (generated during runs)
+SystemCleaner/Logs/
+SystemCleaner/Reports/
+*.log
+*.html
+*.json
+*.csv
+
+# Falkon Rollback Backups
+RegBackup_*.reg
+Backup/
+Rollbacks/
+
+# Pester Cache
+.pester/

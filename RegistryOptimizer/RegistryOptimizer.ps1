@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$Menu,
-    [switch]$Apply
+    [switch]$Apply,
+    [switch]$WhatIfOnly
 )
 
 $corePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Core\FalkonCore.psm1"
@@ -11,14 +12,23 @@ $safetyPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Safety\SystemRestore
 if (Test-Path $safetyPath) { Import-Module $safetyPath -ErrorAction SilentlyContinue }
 
 function Invoke-ContextMenuFix {
+    param([switch]$WhatIfOnly)
     Write-Host "[*] Restoring Classic Windows 10 Context Menu (Removes 'Show more options')..." -ForegroundColor Yellow
     
+    $path = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}"
+    if ($WhatIfOnly) {
+        Write-Host "[Dry Run] Would restore Classic Windows 10 Context Menu." -ForegroundColor Green
+        return
+    }
+
     try {
-        $path = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32"
-        if (-not (Test-Path $path)) {
-            New-Item -Path $path -Force -ErrorAction Stop | Out-Null
+        if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $path }
+        
+        $serverPath = "$path\InprocServer32"
+        if (-not (Test-Path $serverPath)) {
+            New-Item -Path $serverPath -Force -ErrorAction Stop | Out-Null
         }
-        Set-ItemProperty -Path $path -Name "(Default)" -Value "" -ErrorAction Stop
+        Set-ItemProperty -Path $serverPath -Name "(Default)" -Value "" -ErrorAction Stop
         Write-Host "[+] Context Menu Optimized." -ForegroundColor Green
     } catch {
         Write-Host "[-] Failed to modify Context Menu: $($_.Exception.Message)" -ForegroundColor Red
@@ -27,10 +37,20 @@ function Invoke-ContextMenuFix {
 }
 
 function Invoke-PrioritySeparation {
+    param([switch]$WhatIfOnly)
     Write-Host "[*] Applying Win32PrioritySeparation (Foreground task latency bias)..." -ForegroundColor Yellow
+    
+    $path = "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl"
+    if ($WhatIfOnly) {
+        Write-Host "[Dry Run] Would set Win32PrioritySeparation to 38." -ForegroundColor Green
+        return
+    }
+
     try {
+        if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $path }
+        
         # Value 38 (0x26) gives foreground apps optimal priority over background tasks
-        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl" -Name "Win32PrioritySeparation" -Value 38 -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path $path -Name "Win32PrioritySeparation" -Value 38 -Type DWord -ErrorAction Stop
         Write-Host "[+] Win32PrioritySeparation Applied." -ForegroundColor Green
     } catch {
         Write-Host "[-] Failed to apply Priority Separation: $($_.Exception.Message)" -ForegroundColor Red
@@ -52,8 +72,8 @@ if ($Menu) {
         if ($choice -eq '1') {
             if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING TWEAKS" } else { Clear-Host }
             if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
-            Invoke-ContextMenuFix
-            Invoke-PrioritySeparation
+            Invoke-ContextMenuFix -WhatIfOnly:$WhatIfOnly
+            Invoke-PrioritySeparation -WhatIfOnly:$WhatIfOnly
             
             if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         }
@@ -61,6 +81,6 @@ if ($Menu) {
 }
 elseif ($Apply) {
     if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
-    Invoke-ContextMenuFix
-    Invoke-PrioritySeparation
+    Invoke-ContextMenuFix -WhatIfOnly:$WhatIfOnly
+    Invoke-PrioritySeparation -WhatIfOnly:$WhatIfOnly
 }

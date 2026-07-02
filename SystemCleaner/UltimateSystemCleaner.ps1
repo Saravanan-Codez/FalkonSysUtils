@@ -108,11 +108,34 @@ $modulePaths = @(
 
 # Audit signatures for security compliance
 $unsignedCount = 0
+$unsignedList = @()
 foreach ($module in $modulePaths) {
     $fullPath = Join-Path $PSScriptRoot $module
     if (-not (Test-UscFileSignature -Path $fullPath)) {
         $unsignedCount++
+        $unsignedList += $module
     }
+}
+
+if ($unsignedCount -gt 0) {
+    Write-Host "[!] WARNING: $unsignedCount unsigned modules detected in this clean run." -ForegroundColor Red
+    $unsignedList | ForEach-Object { Write-Host "    - Unsigned: $_" -ForegroundColor Yellow }
+    
+    # Interactive check
+    if ($Host.UI -ne $null -and ($Host.Name -eq 'ConsoleHost' -or $Host.Name -eq 'Visual Studio Code Host')) {
+        $confirm = Read-Host "Do you want to trust and import these modules? (y/N)"
+        if ($confirm -notmatch '^[yY]') {
+            throw "Execution aborted: unsigned modules signature check failed."
+        }
+    } else {
+        # Silent/automation logging
+        Write-Warning "Running in non-interactive host. Automatically importing unsigned modules: $($unsignedList -join ', ')"
+    }
+}
+
+# Import audited modules
+foreach ($module in $modulePaths) {
+    $fullPath = Join-Path $PSScriptRoot $module
     Import-Module $fullPath -Force
 }
 
@@ -217,6 +240,11 @@ function Invoke-UscCleanupMode {
     if ($Config.Safe.RecycleBin) { 
         $results.Add((Invoke-UscRecycleBinCleanup -WhatIfOnly:$WhatIfOnly)) 
     }
+    if ($Config.Safe.BrowserCache) {
+        Start-UscProgress -Activity 'Cleaning Browser Cache' -Status 'Scanning chromium and gecko profiles...' -Id 3 -ParentId 1
+        $results.AddRange(@(Invoke-UscBrowserCacheCleanup -Config $Config -WhatIfOnly:$WhatIfOnly)) 
+        Complete-UscProgress -Activity 'Cleaning Browser Cache' -Id 3
+    }
 
     # Aggressive operations
     if ($Mode -in 'Aggressive','Nuclear') {
@@ -228,7 +256,8 @@ function Invoke-UscCleanupMode {
         if ($Config.Aggressive.GpuShaderCache) { 
             $results.AddRange(@(Invoke-UscGpuCacheCleanup -Config $Config -WhatIfOnly:$WhatIfOnly)) 
         }
-        if ($Config.Aggressive.BrowserCache) { 
+        # Only run here if it was not already run in safe mode pass
+        if ($Config.Aggressive.BrowserCache -and -not $Config.Safe.BrowserCache) { 
             Start-UscProgress -Activity 'Cleaning Browser Cache' -Status 'Scanning chromium and gecko profiles...' -Id 3 -ParentId 1
             $results.AddRange(@(Invoke-UscBrowserCacheCleanup -Config $Config -WhatIfOnly:$WhatIfOnly)) 
             Complete-UscProgress -Activity 'Cleaning Browser Cache' -Id 3
@@ -688,7 +717,8 @@ else {
     Write-Host " Run Identifier : $runId"
     Write-Host " Mode Executed  : $mode"
     Write-Host " Dry Run Status : $dryRun"
-    Write-Host " Total Freed    : $(Format-UscBytes -Bytes $run.TotalBytesFreed)" -ForegroundColor Green
+    $freedLabel = if ($dryRun) { " Est. Reclaimable" } else { " Total Freed" }
+    Write-Host "$freedLabel : $(Format-UscBytes -Bytes $run.TotalBytesFreed)" -ForegroundColor Green
     $logUri = ([uri]$logFile).AbsoluteUri
     Write-Host " Log File Location: $logUri"
     Write-Host ' Reports Generated:'

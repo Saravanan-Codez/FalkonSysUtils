@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$Menu,
-    [switch]$Apply
+    [switch]$Apply,
+    [switch]$WhatIfOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,17 +15,25 @@ $corePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Core\FalkonCore.psm1"
 if (Test-Path $corePath) { Import-Module $corePath -ErrorAction SilentlyContinue }
 
 function Invoke-UltimatePowerPlan {
+    param([switch]$WhatIfOnly)
     Write-Host "[*] Unlocking Ultimate Performance Power Plan..." -ForegroundColor Yellow
     
+    if ($WhatIfOnly) {
+        Write-Host "[Dry Run] Would unlock and activate Ultimate Performance power plan." -ForegroundColor Green
+        return
+    }
+
     try {
         # Inject the Ultimate Performance GUID
         $planGuid = "e9a42b02-d5df-448d-aa00-03f14749eb61"
-        powercfg -duplicatescheme $planGuid | Out-Null
+        $out = & powercfg.exe -duplicatescheme $planGuid 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "powercfg -duplicatescheme failed: $out" }
         
         # Attempt to set it as active
         $allPlans = powercfg -l
         if ($allPlans -match $planGuid) {
-            powercfg -setactive $planGuid | Out-Null
+            $out2 = & powercfg.exe -setactive $planGuid 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "powercfg -setactive failed: $out2" }
             Write-Host "[+] Ultimate Performance Plan unlocked and activated." -ForegroundColor Green
         } else {
             Write-Host "[-] Failed to activate Ultimate Performance." -ForegroundColor DarkYellow
@@ -36,9 +45,17 @@ function Invoke-UltimatePowerPlan {
 }
 
 function Invoke-WindowsUpdateControl {
+    param([switch]$WhatIfOnly)
     Write-Host "[*] Blocking Forced Windows Update Driver Installations..." -ForegroundColor Yellow
+    $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
+    
+    if ($WhatIfOnly) {
+        Write-Host "[Dry Run] Would block forced driver updates via HKLM registry." -ForegroundColor Green
+        return
+    }
+
     try {
-        $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
+        if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
         if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force -ErrorAction Stop | Out-Null }
         Set-ItemProperty -Path $regPath -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord -ErrorAction Stop
         Write-Host "[+] OEM Driver Overrides Prevented." -ForegroundColor Green
@@ -49,9 +66,17 @@ function Invoke-WindowsUpdateControl {
 }
 
 function Invoke-TaskbarDebloat {
+    param([switch]$WhatIfOnly)
     Write-Host "[*] Unpinning Chat, Widgets, and Copilot from Taskbar..." -ForegroundColor Yellow
+    $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    
+    if ($WhatIfOnly) {
+        Write-Host "[Dry Run] Would unpin Widgets, Chat, and Copilot buttons." -ForegroundColor Green
+        return
+    }
+
     try {
-        $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
         Set-ItemProperty -Path $regPath -Name "TaskbarMn" -Value 0 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path $regPath -Name "TaskbarDa" -Value 0 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path $regPath -Name "ShowCopilotButton" -Value 0 -Type DWord -ErrorAction Stop
@@ -63,9 +88,18 @@ function Invoke-TaskbarDebloat {
 }
 
 function Invoke-TelemetryNuke {
+    param([switch]$WhatIfOnly)
     Write-Host "[*] Nuking Telemetry & Data Collection..." -ForegroundColor Yellow
+    $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+    
+    if ($WhatIfOnly) {
+        Write-Host "[Dry Run] Would disable system telemetry and diagnostics services." -ForegroundColor Green
+        return
+    }
+
     try {
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value 0 -Type DWord -ErrorAction Stop
+        if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
+        Set-ItemProperty -Path $regPath -Name "AllowTelemetry" -Value 0 -Type DWord -ErrorAction Stop
         Stop-Service "DiagTrack" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
         Set-Service "DiagTrack" -StartupType Disabled -ErrorAction Stop
         Write-Host "[+] Telemetry Nuked." -ForegroundColor Green
@@ -76,13 +110,18 @@ function Invoke-TelemetryNuke {
 }
 
 function Invoke-Debloat {
-    param([string]$Profile)
+    param([string]$Profile, [switch]$WhatIfOnly)
     Write-Host "[*] Eradicating Bloatware ($Profile Profile)..." -ForegroundColor Yellow
     $commonBloat = @("*Microsoft.BingNews*", "*Microsoft.GetHelp*", "*Microsoft.Getstarted*", "*Microsoft.Microsoft3DViewer*", "*king.com.CandyCrush*")
     
     if ($Profile -eq 'Performance') { $commonBloat += "*Microsoft.MicrosoftOfficeHub*" }
     elseif ($Profile -eq 'Stability') { $commonBloat += "*Microsoft.XboxApp*"; $commonBloat += "*Microsoft.XboxGamingOverlay*" }
     
+    if ($WhatIfOnly) {
+        Write-Host "[Dry Run] Would uninstall: $($commonBloat -join ', ')" -ForegroundColor Green
+        return
+    }
+
     foreach ($app in $commonBloat) {
         try {
             $pkg = Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue
@@ -101,8 +140,13 @@ function Invoke-Debloat {
 }
 
 function Invoke-ServicesTweaks {
-    param([string]$Profile)
+    param([string]$Profile, [switch]$WhatIfOnly)
     Write-Host "[*] Optimizing Services ($Profile Profile)..." -ForegroundColor Yellow
+    if ($WhatIfOnly) {
+        Write-Host "[Dry Run] Would disable SysMain service$(if ($Profile -eq 'Performance') { ' and Windows Search indexing' })." -ForegroundColor Green
+        return
+    }
+
     try {
         Stop-Service "SysMain" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
         Set-Service "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
@@ -143,12 +187,12 @@ if ($Menu) {
         # Engage Safety Net Before Modifying
         if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
         
-        Invoke-TelemetryNuke
-        Invoke-Debloat -Profile $profile
-        Invoke-ServicesTweaks -Profile $profile
-        Invoke-UltimatePowerPlan
-        Invoke-WindowsUpdateControl
-        Invoke-TaskbarDebloat
+        Invoke-TelemetryNuke -WhatIfOnly:$WhatIfOnly
+        Invoke-Debloat -Profile $profile -WhatIfOnly:$WhatIfOnly
+        Invoke-ServicesTweaks -Profile $profile -WhatIfOnly:$WhatIfOnly
+        Invoke-UltimatePowerPlan -WhatIfOnly:$WhatIfOnly
+        Invoke-WindowsUpdateControl -WhatIfOnly:$WhatIfOnly
+        Invoke-TaskbarDebloat -WhatIfOnly:$WhatIfOnly
         
         if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
     }
@@ -156,10 +200,10 @@ if ($Menu) {
 elseif ($Apply) {
     # Engage Safety Net Before Modifying
     if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
-    Invoke-TelemetryNuke
-    Invoke-Debloat -Profile "Stability"
-    Invoke-ServicesTweaks -Profile "Stability"
-    Invoke-UltimatePowerPlan
-    Invoke-WindowsUpdateControl
-    Invoke-TaskbarDebloat
+    Invoke-TelemetryNuke -WhatIfOnly:$WhatIfOnly
+    Invoke-Debloat -Profile "Stability" -WhatIfOnly:$WhatIfOnly
+    Invoke-ServicesTweaks -Profile "Stability" -WhatIfOnly:$WhatIfOnly
+    Invoke-UltimatePowerPlan -WhatIfOnly:$WhatIfOnly
+    Invoke-WindowsUpdateControl -WhatIfOnly:$WhatIfOnly
+    Invoke-TaskbarDebloat -WhatIfOnly:$WhatIfOnly
 }

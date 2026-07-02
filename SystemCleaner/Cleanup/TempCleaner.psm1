@@ -4,15 +4,20 @@ function Get-UscTempTargets {
     [CmdletBinding()]
     param([psobject]$Config)
 
-    @(
+    $targets = @(
         @{ Name = 'User Temp'; Path = $env:TEMP; Pattern = '*'; Recurse = $true },
         @{ Name = 'Windows Temp'; Path = Join-Path $env:WINDIR 'Temp'; Pattern = '*'; Recurse = $true },
         @{ Name = 'Prefetch'; Path = Join-Path $env:WINDIR 'Prefetch'; Pattern = '*.pf'; Recurse = $false },
-        @{ Name = 'Thumbnail Cache'; Path = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Explorer'; Pattern = 'thumbcache_*.db'; Recurse = $false },
         @{ Name = 'Cryptnet URL Cache'; Path = Join-Path $env:APPDATA 'Microsoft\CryptnetUrlCache'; Pattern = '*'; Recurse = $true },
         @{ Name = 'Windows Installer Temp'; Path = Join-Path $env:WINDIR 'Installer\$MSI*'; Pattern = '*'; Recurse = $true },
         @{ Name = 'CBS and DISM Logs'; Path = Join-Path $env:WINDIR 'Logs\CBS'; Pattern = '*'; Recurse = $true }
     )
+
+    if ($Config.Safe.Thumbnails) {
+        $targets += @{ Name = 'Thumbnail Cache'; Path = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Explorer'; Pattern = 'thumbcache_*.db'; Recurse = $false }
+    }
+
+    return $targets
 }
 
 function Invoke-UscTempCleanup {

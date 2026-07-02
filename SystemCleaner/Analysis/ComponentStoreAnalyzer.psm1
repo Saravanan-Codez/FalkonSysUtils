@@ -26,6 +26,9 @@ function Get-UscComponentStoreAnalysis {
     try {
         Write-UscLog -Level Information -Message 'Running DISM Component Store Analysis (this may take a few minutes)...'
         $output = & dism.exe /Online /Cleanup-Image /AnalyzeComponentStore 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "DISM component store analysis failed (Exit Code: $LASTEXITCODE). Output: $($output -join ' ')"
+        }
         $result.RawOutput = @($output)
         
         foreach ($line in $output) {
@@ -78,6 +81,9 @@ function Invoke-UscComponentStoreCleanup {
         if ($PSCmdlet.ShouldProcess('Windows Component Store', "DISM $($arguments -join ' ')")) {
             Write-UscLog -Level Information -Message "Starting DISM component store cleanup: $($arguments -join ' ')"
             $output = & dism.exe @arguments 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                throw "DISM component store cleanup failed (Exit Code: $LASTEXITCODE). Output: $($output -join ' ')"
+            }
             Write-UscLog -Level Information -Message 'DISM component store cleanup finished'
             return New-UscOperationResult -Name 'Component Store Cleanup' -Category Clean -Status Succeeded -Message ($output -join [Environment]::NewLine)
         }

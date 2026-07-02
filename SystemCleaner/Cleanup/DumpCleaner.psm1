@@ -68,7 +68,11 @@ function Invoke-UscNuclearRecoveryCleanup {
         elseif ($PSCmdlet.ShouldProcess('All shadow copies', $message)) {
             Write-UscLog -Level Warning -Message 'Deleting all volume shadow copies via vssadmin...'
             $output = & vssadmin.exe delete shadows /all /quiet 2>&1
-            $results.Add((New-UscOperationResult -Name 'Shadow Copies' -Category Clean -Status Succeeded -Message ($output -join [Environment]::NewLine)))
+            $status = 'Succeeded'
+            if ($LASTEXITCODE -ne 0 -and $output -notmatch '(?i)No items found') {
+                $status = 'Failed'
+            }
+            $results.Add((New-UscOperationResult -Name 'Shadow Copies' -Category Clean -Status $status -Message ($output -join [Environment]::NewLine)))
         }
     }
 
@@ -80,7 +84,11 @@ function Invoke-UscNuclearRecoveryCleanup {
         elseif ($PSCmdlet.ShouldProcess('System restore checkpoints', $message)) {
             Write-UscLog -Level Warning -Message 'Deleting oldest system restore checkpoints...'
             $output = & vssadmin.exe delete shadows /for=$env:SystemDrive /oldest /quiet 2>&1
-            $results.Add((New-UscOperationResult -Name 'Restore Points' -Category Clean -Status Succeeded -Message ($output -join [Environment]::NewLine)))
+            $status = 'Succeeded'
+            if ($LASTEXITCODE -ne 0 -and $output -notmatch '(?i)No items found') {
+                $status = 'Failed'
+            }
+            $results.Add((New-UscOperationResult -Name 'Restore Points' -Category Clean -Status $status -Message ($output -join [Environment]::NewLine)))
         }
     }
 

@@ -1,5 +1,21 @@
 Set-StrictMode -Version Latest
 
+if (-not (Get-Command Format-UscBytes -ErrorAction SilentlyContinue)) {
+    $progressPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Core\Progress.psm1"
+    if (Test-Path $progressPath) {
+        Import-Module $progressPath -ErrorAction SilentlyContinue
+    }
+}
+if (-not (Get-Command Format-UscBytes -ErrorAction SilentlyContinue)) {
+    function Format-UscBytes {
+        param([Int64]$Bytes)
+        if ($Bytes -ge 1GB) { return "{0:N2} GB" -f ($Bytes / 1GB) }
+        if ($Bytes -ge 1MB) { return "{0:N2} MB" -f ($Bytes / 1MB) }
+        if ($Bytes -ge 1KB) { return "{0:N2} KB" -f ($Bytes / 1KB) }
+        return "$Bytes Bytes"
+    }
+}
+
 function ConvertTo-UscHtmlEncoded {
     param([AllowNull()][object]$Value)
     return [System.Net.WebUtility]::HtmlEncode([string]$Value)
