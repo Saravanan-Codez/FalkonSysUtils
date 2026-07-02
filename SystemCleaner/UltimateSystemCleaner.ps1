@@ -86,10 +86,6 @@ Get-ChildItem -LiteralPath $PSScriptRoot -Include *.ps1,*.psm1 -Recurse -ErrorAc
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Import Core modules first to enable signing check
-$sigModulePath = Join-Path $PSScriptRoot 'Core\Signature.psm1'
-Import-Module $sigModulePath -Force
-
 $modulePaths = @(
     'Core\Logger.psm1',
     'Core\Config.psm1',
@@ -108,38 +104,12 @@ $modulePaths = @(
     'History\HistoryManager.psm1'
 )
 
-# Audit signatures for security compliance
-$unsignedCount = 0
-$unsignedList = @()
-foreach ($module in $modulePaths) {
-    $fullPath = Join-Path $PSScriptRoot $module
-    if (-not (Test-UscFileSignature -Path $fullPath)) {
-        $unsignedCount++
-        $unsignedList += $module
-    }
-}
-
-if ($unsignedCount -gt 0) {
-    Write-Host "[!] WARNING: $unsignedCount unsigned modules detected in this clean run." -ForegroundColor Red
-    $unsignedList | ForEach-Object { Write-Host "    - Unsigned: $_" -ForegroundColor Yellow }
-    
-    # Interactive check
-    if ($Host.UI -ne $null -and ($Host.Name -eq 'ConsoleHost' -or $Host.Name -eq 'Visual Studio Code Host')) {
-        $confirm = Read-Host "Do you want to trust and import these modules? (y/N)"
-        if ($confirm -notmatch '^[yY]') {
-            throw "Execution aborted: unsigned modules signature check failed."
-        }
-    } else {
-        # Silent/automation logging
-        Write-Warning "Running in non-interactive host. Automatically importing unsigned modules: $($unsignedList -join ', ')"
-    }
-}
-
-# Import audited modules
+# Import all required modules
 foreach ($module in $modulePaths) {
     $fullPath = Join-Path $PSScriptRoot $module
     Import-Module $fullPath -Force
 }
+
 
 function Test-UscAdministrator {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()

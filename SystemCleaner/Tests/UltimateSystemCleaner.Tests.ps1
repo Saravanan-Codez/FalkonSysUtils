@@ -3,7 +3,6 @@ Set-StrictMode -Version Latest
 $root = Split-Path -Parent $PSScriptRoot
 Import-Module (Join-Path $root 'Core\Config.psm1') -Force
 Import-Module (Join-Path $root 'Core\Logger.psm1') -Force
-Import-Module (Join-Path $root 'Core\Signature.psm1') -Force
 Import-Module (Join-Path $root 'Core\RunspaceManager.psm1') -Force
 Import-Module (Join-Path $root 'Core\Progress.psm1') -Force
 Import-Module (Join-Path $root 'Analysis\DiskAnalyzer.psm1') -Force
