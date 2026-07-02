@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$Menu
+    [switch]$Menu,
+    [switch]$Apply
 )
 
 $ErrorActionPreference = 'Stop'
@@ -151,4 +152,14 @@ if ($Menu) {
         
         if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
     }
+}
+elseif ($Apply) {
+    # Engage Safety Net Before Modifying
+    if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+    Invoke-TelemetryNuke
+    Invoke-Debloat -Profile "Stability"
+    Invoke-ServicesTweaks -Profile "Stability"
+    Invoke-UltimatePowerPlan
+    Invoke-WindowsUpdateControl
+    Invoke-TaskbarDebloat
 }

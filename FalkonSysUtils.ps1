@@ -121,11 +121,12 @@ while ($true) {
     Write-Host " Processor         : $cpuInfo" -ForegroundColor Gray
     Write-Host " Installed RAM     : $ramInfo GB" -ForegroundColor Gray
     Write-Host '--------------------------------------------------' -ForegroundColor Cyan
-    Write-Host '[1] Run Falkon System Cleaner' -ForegroundColor Green
-    Write-Host '[2] Falkon Registry Optimizer' -ForegroundColor Magenta
-    Write-Host '[3] Falkon Network Optimizer' -ForegroundColor Blue
-    Write-Host '[4] Falkon System Optimizer (Tweaker)' -ForegroundColor Yellow
-    Write-Host '[5] Falkon Essential App Installer (Winget)' -ForegroundColor DarkCyan
+    Write-Host '[1] System Disk Space Cleaner' -ForegroundColor Green
+    Write-Host '[2] Windows Registry Optimizer' -ForegroundColor Magenta
+    Write-Host '[3] TCP/IP Network Connection Latency Optimizer' -ForegroundColor Blue
+    Write-Host '[4] Windows Privacy Telemetry & Services Tweaker' -ForegroundColor Yellow
+    Write-Host '[5] Software Silent Batch Package Installer' -ForegroundColor DarkCyan
+    Write-Host '[6] Apply Recommended Settings (One-Click Preset)' -ForegroundColor Red
     Write-Host '[0] Exit' -ForegroundColor White
     Write-Host '==================================================' -ForegroundColor Cyan
     
@@ -155,6 +156,37 @@ while ($true) {
             $appPath = Join-Path $PSScriptRoot 'FalkonPackageStore\AppInstaller.ps1'
             if (Test-Path -LiteralPath $appPath) { & $appPath -Menu }
             else { Write-Host "Module missing: $appPath" -ForegroundColor Red; Start-Sleep -Seconds 2 }
+        }
+        '6' {
+            if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING PRESET" } else { Clear-Host }
+            
+            # 1. Safety Net Restore Point
+            $safetyPath = Join-Path $PSScriptRoot "Safety\SystemRestore.psm1"
+            if (Test-Path $safetyPath) {
+                Import-Module $safetyPath -ErrorAction SilentlyContinue
+                if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+            }
+
+            # 2. Disk Space Cleanup (Safe Mode)
+            $cleanerPath = Join-Path $PSScriptRoot 'SystemCleaner\UltimateSystemCleaner.ps1'
+            if (Test-Path $cleanerPath) {
+                Write-Host "[*] Executing Safe Disk Cleanup..." -ForegroundColor Yellow
+                & $cleanerPath -Safe -ErrorAction SilentlyContinue
+            }
+
+            # 3. Registry Optimizer
+            $regPath = Join-Path $PSScriptRoot 'RegistryOptimizer\RegistryOptimizer.ps1'
+            if (Test-Path $regPath) { & $regPath -Apply }
+
+            # 4. Network Optimizer
+            $netPath = Join-Path $PSScriptRoot 'NetworkOptimizer\NetworkOptimizer.ps1'
+            if (Test-Path $netPath) { & $netPath -Apply }
+
+            # 5. System Optimizer
+            $optPath = Join-Path $PSScriptRoot 'SystemOptimizer\SystemOptimizer.ps1'
+            if (Test-Path $optPath) { & $optPath -Apply }
+
+            if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         }
         '0' {
             Write-Host 'Goodbye!' -ForegroundColor Cyan

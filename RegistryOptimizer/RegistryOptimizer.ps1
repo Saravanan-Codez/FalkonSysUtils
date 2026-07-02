@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$Menu
+    [switch]$Menu,
+    [switch]$Apply
 )
 
 $corePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Core\FalkonCore.psm1"
@@ -57,4 +58,9 @@ if ($Menu) {
             if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         }
     }
+}
+elseif ($Apply) {
+    if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+    Invoke-ContextMenuFix
+    Invoke-PrioritySeparation
 }
