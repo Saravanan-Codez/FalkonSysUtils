@@ -339,12 +339,14 @@ function Show-UscResultsSummary {
         ($Run.Finished - $Run.Started).ToString('mm\:ss')
     } else { '-' }
 
+    $isAnalyzeMode = $Run.Mode -in 'Diagnose', 'Analyze', 'DeepSpace', 'ComponentStore'
+
     Write-Host ''
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host '       ULTIMATE SYSTEM CLEANER - RESULTS          ' -ForegroundColor White -BackgroundColor Blue
     Write-Host '==================================================' -ForegroundColor Cyan
 
-    if ($Run.WhatIfOnly) {
+    if ($Run.WhatIfOnly -and -not $isAnalyzeMode) {
         Write-Host '  *** DRY RUN - nothing was deleted ***' -ForegroundColor Yellow
         Write-Host '  Toggle DryRunDefault in Settings, or confirm when prompted.' -ForegroundColor Gray
         Write-Host '--------------------------------------------------' -ForegroundColor Cyan
@@ -355,23 +357,25 @@ function Show-UscResultsSummary {
     Write-Host " Duration       : $duration"
     Write-Host " Admin          : $($Run.IsAdministrator)"
 
-    Write-Host '--------------------------------------------------' -ForegroundColor Cyan
-    Write-Host ' DISK SPACE' -ForegroundColor Green
-    foreach ($before in @($Run.Before)) {
-        $after = @($Run.After) | Where-Object { $_.Drive -eq $before.Drive } | Select-Object -First 1
-        $afterFree = if ($after) { [Int64]$after.FreeSpace } else { [Int64]$before.FreeSpace }
-        $delta = $afterFree - [Int64]$before.FreeSpace
-        $deltaText = if ($delta -gt 0) { "+$(Format-UscBytes -Bytes $delta)" } elseif ($delta -lt 0) { Format-UscBytes -Bytes $delta } else { 'unchanged' }
-        $deltaColor = if ($delta -gt 0) { 'Green' } elseif ($delta -lt 0) { 'Red' } else { 'DarkGray' }
-        Write-Host "  Drive $($before.Drive):"
-        Write-Host "    Before : $(Format-UscBytes -Bytes $before.FreeSpace) free" -ForegroundColor Gray
-        Write-Host "    After  : $(Format-UscBytes -Bytes $afterFree) free" -ForegroundColor Gray
-        Write-Host "    Change : $deltaText" -ForegroundColor $deltaColor
-    }
+    if (-not $isAnalyzeMode) {
+        Write-Host '--------------------------------------------------' -ForegroundColor Cyan
+        Write-Host ' DISK SPACE' -ForegroundColor Green
+        foreach ($before in @($Run.Before)) {
+            $after = @($Run.After) | Where-Object { $_.Drive -eq $before.Drive } | Select-Object -First 1
+            $afterFree = if ($after) { [Int64]$after.FreeSpace } else { [Int64]$before.FreeSpace }
+            $delta = $afterFree - [Int64]$before.FreeSpace
+            $deltaText = if ($delta -gt 0) { "+$(Format-UscBytes -Bytes $delta)" } elseif ($delta -lt 0) { "-$(Format-UscBytes -Bytes ([Math]::Abs($delta)))" } else { 'unchanged' }
+            $deltaColor = if ($delta -gt 0) { 'Green' } elseif ($delta -lt 0) { 'Red' } else { 'DarkGray' }
+            Write-Host "  Drive $($before.Drive):"
+            Write-Host "    Before : $(Format-UscBytes -Bytes $before.FreeSpace) free" -ForegroundColor Gray
+            Write-Host "    After  : $(Format-UscBytes -Bytes $afterFree) free" -ForegroundColor Gray
+            Write-Host "    Change : $deltaText" -ForegroundColor $deltaColor
+        }
 
-    $freedLabel = if ($Run.WhatIfOnly) { 'Est. Reclaimable' } else { 'Reported Freed' }
-    Write-Host '--------------------------------------------------' -ForegroundColor Cyan
-    Write-Host " $freedLabel : $(Format-UscBytes -Bytes $Run.TotalBytesFreed)" -ForegroundColor Green
+        $freedLabel = if ($Run.WhatIfOnly) { 'Est. Reclaimable' } else { 'Reported Freed' }
+        Write-Host '--------------------------------------------------' -ForegroundColor Cyan
+        Write-Host " $freedLabel : $(Format-UscBytes -Bytes $Run.TotalBytesFreed)" -ForegroundColor Green
+    }
 
     $cleanOps = @($Run.Results) | Where-Object { $_.Category -in 'Clean','Checkpoint','Configure' }
     if ($cleanOps.Count -gt 0) {

@@ -18,7 +18,11 @@ function Save-UscRunHistory {
 
     $dir = Get-UscHistoryDirectory
 
-    # Serialize just the summary-level data (avoid deep nesting, keep file small)
+    # Always coerce to arrays so .Count works on PowerShell 5 scalars
+    $results    = @($Run.Results)
+    $drivesBefore = @($Run.Before)
+    $drivesAfter  = @($Run.After)
+
     $summary = [pscustomobject]@{
         RunId         = $Run.RunId
         Mode          = $Run.Mode
@@ -26,13 +30,13 @@ function Save-UscRunHistory {
         Finished      = $Run.Finished.ToString('o')
         ComputerName  = $Run.ComputerName
         WhatIfOnly    = $Run.WhatIfOnly
-        TotalBytesFreed = $Run.TotalBytesFreed
-        DrivesBefore  = @($Run.Before | ForEach-Object { [pscustomobject]@{ Drive = $_.Drive; FreeSpace = $_.FreeSpace; Size = $_.Size } })
-        DrivesAfter   = @($Run.After  | ForEach-Object { [pscustomobject]@{ Drive = $_.Drive; FreeSpace = $_.FreeSpace; Size = $_.Size } })
-        ResultsCount  = $Run.Results.Count
-        SucceededOps  = @($Run.Results | Where-Object { $_.Status -eq 'Succeeded' }).Count
-        FailedOps     = @($Run.Results | Where-Object { $_.Status -eq 'Failed' }).Count
-        SkippedOps    = @($Run.Results | Where-Object { $_.Status -in 'Skipped','Simulated' }).Count
+        TotalBytesFreed = [Int64]$Run.TotalBytesFreed
+        DrivesBefore  = @($drivesBefore | ForEach-Object { [pscustomobject]@{ Drive = $_.Drive; FreeSpace = $_.FreeSpace; Size = $_.Size } })
+        DrivesAfter   = @($drivesAfter  | ForEach-Object { [pscustomobject]@{ Drive = $_.Drive; FreeSpace = $_.FreeSpace; Size = $_.Size } })
+        ResultsCount  = $results.Count
+        SucceededOps  = @($results | Where-Object { $_.Status -eq 'Succeeded' }).Count
+        FailedOps     = @($results | Where-Object { $_.Status -eq 'Failed' }).Count
+        SkippedOps    = @($results | Where-Object { $_.Status -in 'Skipped','Simulated' }).Count
     }
 
     $path = Join-Path $dir "run-$($Run.RunId).json"
