@@ -198,12 +198,26 @@ if ($Menu) {
     }
 }
 elseif ($Apply) {
+    $applyStart = Get-Date
+    $appliedTweaks = [System.Collections.Generic.List[string]]::new()
+
     # Engage Safety Net Before Modifying
     if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
-    Invoke-TelemetryNuke -WhatIfOnly:$WhatIfOnly
-    Invoke-Debloat -Profile "Stability" -WhatIfOnly:$WhatIfOnly
-    Invoke-ServicesTweaks -Profile "Stability" -WhatIfOnly:$WhatIfOnly
-    Invoke-UltimatePowerPlan -WhatIfOnly:$WhatIfOnly
-    Invoke-WindowsUpdateControl -WhatIfOnly:$WhatIfOnly
-    Invoke-TaskbarDebloat -WhatIfOnly:$WhatIfOnly
+    
+    Invoke-TelemetryNuke -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Telemetry Disable & Registry Wipe')
+    Invoke-Debloat -Profile "Stability" -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Stability-Safe App Debloat')
+    Invoke-ServicesTweaks -Profile "Stability" -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Service Profile Optimization')
+    Invoke-UltimatePowerPlan -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Ultimate Performance Power Plan')
+    Invoke-WindowsUpdateControl -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('OEM Driver Override Block')
+    Invoke-TaskbarDebloat -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Taskbar Cleanup (Widgets, Chat, Copilot)')
+
+    $applyDuration = [Math]::Round(((Get-Date) - $applyStart).TotalSeconds, 1)
+    Write-Host ""
+    Write-Host "=================================================" -ForegroundColor Cyan
+    Write-Host "  SYSTEM OPTIMIZER COMPLETE ($applyDuration sec)" -ForegroundColor White -BackgroundColor DarkGreen
+    Write-Host "=================================================" -ForegroundColor Cyan
+    foreach ($tweak in $appliedTweaks) {
+        Write-Host "  [+] $tweak" -ForegroundColor Green
+    }
+    Write-Host "=================================================" -ForegroundColor Cyan
 }

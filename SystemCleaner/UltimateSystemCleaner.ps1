@@ -17,6 +17,7 @@ param(
     [Parameter(ParameterSetName = 'Aggressive')][switch]$Aggressive,
     [Parameter(ParameterSetName = 'Nuclear')][switch]$Nuclear,
     [Parameter(ParameterSetName = 'Analyze')][switch]$Analyze,
+    [Parameter(ParameterSetName = 'Diagnose')][switch]$Diagnose,
     [Parameter(ParameterSetName = 'ComponentStore')][switch]$ComponentStore,
     [Parameter(ParameterSetName = 'Schedule')][switch]$InstallScheduledTask,
     [Parameter(ParameterSetName = 'Schedule')][switch]$RemoveScheduledTask,
@@ -103,7 +104,8 @@ $modulePaths = @(
     'Cleanup\WindowsUpdateCleaner.psm1',
     'Cleanup\DumpCleaner.psm1',
     'Reports\JsonReport.psm1',
-    'Reports\HtmlReport.psm1'
+    'Reports\HtmlReport.psm1',
+    'History\HistoryManager.psm1'
 )
 
 # Audit signatures for security compliance
@@ -467,6 +469,7 @@ function Show-UscMenu {
         Write-Host '[7] Component Store Analysis' -ForegroundColor Green
         Write-Host '[8] Schedule Weekly Safe Clean' -ForegroundColor Cyan
         Write-Host '[9] Code Signing Helper' -ForegroundColor DarkCyan
+        Write-Host '[H] Run History & Comparison' -ForegroundColor DarkCyan
         Write-Host '[0] Exit' -ForegroundColor White
         Write-Host '==================================================' -ForegroundColor Cyan
         
@@ -487,6 +490,7 @@ function Show-UscMenu {
             '7' { return @{ Mode = 'ComponentStore'; ConfirmNuclear = $false } }
             '8' { Show-UscScheduleHelper; break }
             '9' { Show-UscSigningHelper; break }
+            { $_ -in 'h','H' } { return @{ Mode = 'History'; ConfirmNuclear = $false } }
             '0' { return @{ Mode = 'Exit'; ConfirmNuclear = $false } }
             default { Write-Host 'Invalid choice, try again.'; Start-Sleep -Seconds 1 }
         }
@@ -900,6 +904,36 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
                     $results.Add((New-UscOperationResult -Name 'Component Store Analysis' -Category Analyze -Status Succeeded -Metadata @{ Analysis = $analysis })) 
                     Write-Host "Store Analysis Status: Cleanup recommended? $($analysis.RecommendedCleanup)" -ForegroundColor Yellow
                 }
+                'History' {
+                    Clear-Host
+                    if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
+                    Write-Host '              RUN HISTORY & COMPARISON             ' -ForegroundColor White -BackgroundColor Blue
+                    Write-Host '==================================================' -ForegroundColor Cyan
+                    Write-Host '[1] Show Last 10 Runs'
+                    Write-Host '[2] Compare Latest vs Previous Run'
+                    Write-Host '[3] Export Trend Data (CSV)'
+                    Write-Host '[4] Back'
+                    Write-Host '==================================================' -ForegroundColor Cyan
+                    $hChoice = Read-Host 'Selection'
+                    switch ($hChoice) {
+                        '1' {
+                            Show-UscRunHistory
+                            $null = Read-Host 'Press Enter to continue'
+                        }
+                        '2' {
+                            Compare-UscLastTwoRuns
+                            $null = Read-Host 'Press Enter to continue'
+                        }
+                        '3' {
+                            $trendPath = Export-UscHistoryTrend
+                            if ($trendPath) {
+                                Write-Host "[+] Trend CSV exported: $trendPath" -ForegroundColor Green
+                            }
+                            $null = Read-Host 'Press Enter to continue'
+                        }
+                    }
+                    continue
+                }
                 default { 
                     $results.AddRange(@(Invoke-UscCleanupMode -Mode $mode -Config $config -WhatIfOnly:$dryRun -ConfirmNuclear:$confirmedNuke)) 
                     if (-not $dryRun) {
@@ -920,6 +954,11 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
             $reportPaths.Add((New-UscJsonReport -Run $run -OutputDirectory $config.ReportDirectory))
             $reportPaths.Add((New-UscCsvReport -Results @($results) -OutputDirectory $config.ReportDirectory -RunId $runId))
             $reportPaths.Add((New-UscHtmlReport -Run $run -OutputDirectory $config.ReportDirectory))
+        }
+
+        # Persist run to history store
+        if (Get-Command Save-UscRunHistory -ErrorAction SilentlyContinue) {
+            Save-UscRunHistory -Run $run
         }
 
         Write-UscLog -Level Audit -Message 'Run finished' -Data @{ Mode = $mode; TotalBytesFreed = $run.TotalBytesFreed; Reports = @($reportPaths); LogFile = $logFile }

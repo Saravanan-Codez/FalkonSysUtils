@@ -80,7 +80,20 @@ if ($Menu) {
     }
 }
 elseif ($Apply) {
+    $applyStart = Get-Date
+    $appliedTweaks = [System.Collections.Generic.List[string]]::new()
+
     if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
-    Invoke-ContextMenuFix -WhatIfOnly:$WhatIfOnly
-    Invoke-PrioritySeparation -WhatIfOnly:$WhatIfOnly
+    Invoke-ContextMenuFix -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Context Menu Latency Fix (Win 11)')
+    Invoke-PrioritySeparation -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Win32 Priority Separation (Foreground Boost)')
+
+    $applyDuration = [Math]::Round(((Get-Date) - $applyStart).TotalSeconds, 1)
+    Write-Host ""
+    Write-Host "=================================================" -ForegroundColor Cyan
+    Write-Host "  REGISTRY OPTIMIZER COMPLETE ($applyDuration sec)" -ForegroundColor White -BackgroundColor DarkGreen
+    Write-Host "=================================================" -ForegroundColor Cyan
+    foreach ($tweak in $appliedTweaks) {
+        Write-Host "  [+] $tweak" -ForegroundColor Green
+    }
+    Write-Host "=================================================" -ForegroundColor Cyan
 }

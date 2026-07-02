@@ -113,8 +113,21 @@ if ($Menu) {
     }
 }
 elseif ($Apply) {
+    $applyStart = Get-Date
+    $appliedTweaks = [System.Collections.Generic.List[string]]::new()
+
     if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
-    Invoke-TcpOptimization -WhatIfOnly:$WhatIfOnly
-    Invoke-DnsFlush -WhatIfOnly:$WhatIfOnly
-    Invoke-DisableDeliveryOptimization -WhatIfOnly:$WhatIfOnly
+    Invoke-TcpOptimization -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('TCP/IP Tuning (CTCP, Window Scaling, Nagle Disable)')
+    Invoke-DnsFlush -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('DNS Cache Flush')
+    Invoke-DisableDeliveryOptimization -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Delivery Optimization (Bandwidth Hog) Disabled')
+
+    $applyDuration = [Math]::Round(((Get-Date) - $applyStart).TotalSeconds, 1)
+    Write-Host ""
+    Write-Host "=================================================" -ForegroundColor Cyan
+    Write-Host "  NETWORK OPTIMIZER COMPLETE ($applyDuration sec)" -ForegroundColor White -BackgroundColor DarkGreen
+    Write-Host "=================================================" -ForegroundColor Cyan
+    foreach ($tweak in $appliedTweaks) {
+        Write-Host "  [+] $tweak" -ForegroundColor Green
+    }
+    Write-Host "=================================================" -ForegroundColor Cyan
 }
