@@ -86,16 +86,8 @@ function Test-UscAdministratorPrivilege {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Show-UscLogo {
-    Write-Host '                 ___' -ForegroundColor Magenta
-    Write-Host '     \          /   \       ___  _   _     _  __  ___   _   _' -ForegroundColor Magenta
-    Write-Host '  ====\        /     \     | __|/ \ | |   | |/ / /   \ | \ | |' -ForegroundColor Magenta
-    Write-Host ' ======\______/   _   \    | _|/ _ \| |__ |   <  | () | |  \| |' -ForegroundColor DarkMagenta
-    Write-Host ' =======_        //\   >   |_|/_/ \_\____||_|\_\ \___/ |_|\___|' -ForegroundColor DarkMagenta
-    Write-Host '  ======/       //  \_/    F A L K O N   S Y S   U T I L S' -ForegroundColor Cyan
-    Write-Host '    ===/_______//' -ForegroundColor Cyan
-    Write-Host '==================================================' -ForegroundColor Cyan
-}
+$corePath = Join-Path $PSScriptRoot 'Core\FalkonCore.psm1'
+if (Test-Path -LiteralPath $corePath) { Import-Module $corePath -ErrorAction SilentlyContinue }
 
 # Check if arguments are provided. If so, forward directly to System Cleaner CLI mode.
 $argsBound = $PSBoundParameters.Count -gt 0
@@ -123,8 +115,7 @@ $cpuInfo = (Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Sele
 $ramInfo = [math]::Round((Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).TotalPhysicalMemory / 1GB, 1)
 
 while ($true) {
-    Clear-Host
-    Show-UscLogo
+    if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo } else { Clear-Host }
     Write-Host " Privilege Context : $adminStatus" -ForegroundColor Yellow
     Write-Host " OS System         : $osInfo" -ForegroundColor Gray
     Write-Host " Processor         : $cpuInfo" -ForegroundColor Gray
