@@ -89,6 +89,9 @@ function Test-UscAdministratorPrivilege {
 $corePath = Join-Path $PSScriptRoot 'Core\FalkonCore.psm1'
 if (Test-Path -LiteralPath $corePath) { Import-Module $corePath -ErrorAction SilentlyContinue }
 
+$loaderPath = Join-Path $PSScriptRoot 'Core\PluginLoader.psm1'
+if (Test-Path -LiteralPath $loaderPath) { Import-Module $loaderPath -ErrorAction SilentlyContinue }
+
 # Check if arguments are provided. If so, forward directly to System Cleaner CLI mode.
 $argsBound = $PSBoundParameters.Count -gt 0
 if ($argsBound -and -not $Menu) {
@@ -127,6 +130,7 @@ while ($true) {
     Write-Host '[4] Windows Privacy Telemetry & Services Tweaker' -ForegroundColor Yellow
     Write-Host '[5] Software Silent Batch Package Installer' -ForegroundColor DarkCyan
     Write-Host '[6] Apply Recommended Settings (One-Click Preset)' -ForegroundColor Red
+    Write-Host '[7] Custom Community Plugins' -ForegroundColor DarkYellow
     Write-Host '[0] Exit' -ForegroundColor White
     Write-Host '==================================================' -ForegroundColor Cyan
     
@@ -187,6 +191,46 @@ while ($true) {
             if (Test-Path $optPath) { & $optPath -Apply }
 
             if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
+        }
+        '7' {
+            if (-not (Get-Command Get-FalkonPlugins -ErrorAction SilentlyContinue)) {
+                Write-Host "[-] Plugin Loader module is not loaded." -ForegroundColor Red
+                Start-Sleep -Seconds 2
+                continue
+            }
+            
+            while ($true) {
+                if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "COMMUNITY PLUGINS" } else { Clear-Host }
+                $plugins = Get-FalkonPlugins
+                if ($plugins.Count -eq 0) {
+                    Write-Host "[!] No custom plugins found in the 'Plugins' folder." -ForegroundColor Yellow
+                    Write-Host "    Place your custom .ps1 scripts inside: D:\Falkon_labs\UltimateSystemUtil\Plugins\" -ForegroundColor Gray
+                    if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
+                    break
+                }
+                
+                Write-Host "Select a plugin to execute:" -ForegroundColor Yellow
+                Write-Host "--------------------------------------------------" -ForegroundColor Cyan
+                for ($i = 0; $i -lt $plugins.Count; $i++) {
+                    $num = $i + 1
+                    Write-Host "[$num] $($plugins[$i].Name)" -ForegroundColor Green
+                    Write-Host "    $($plugins[$i].Description)" -ForegroundColor Gray
+                }
+                Write-Host "[0] Back to Main Menu" -ForegroundColor White
+                Write-Host "==================================================" -ForegroundColor Cyan
+                
+                $pChoice = Read-Host "Select Plugin"
+                if ($pChoice -eq '0') { break }
+                
+                if ($pChoice -match '^\d+$') {
+                    $index = [int]$pChoice - 1
+                    if ($index -ge 0 -and $index -lt $plugins.Count) {
+                        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "RUNNING PLUGIN" } else { Clear-Host }
+                        Invoke-FalkonPlugin -Plugin $plugins[$index]
+                        if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
+                    }
+                }
+            }
         }
         '0' {
             Write-Host 'Goodbye!' -ForegroundColor Cyan
