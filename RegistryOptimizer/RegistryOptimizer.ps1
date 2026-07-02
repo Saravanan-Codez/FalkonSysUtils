@@ -5,6 +5,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$safetyPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Safety\SystemRestore.psm1"
+if (Test-Path $safetyPath) { Import-Module $safetyPath -ErrorAction SilentlyContinue }
+
 function Show-RegistryHeader {
     Clear-Host
     Write-Host '==================================================' -ForegroundColor Cyan
@@ -46,6 +49,7 @@ if ($Menu) {
         if ($choice -eq '0') { return }
         if ($choice -eq '1') {
             Show-RegistryHeader
+            if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
             Invoke-ContextMenuFix
             Invoke-PrioritySeparation
             

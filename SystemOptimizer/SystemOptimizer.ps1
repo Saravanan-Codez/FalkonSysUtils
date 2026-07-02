@@ -5,6 +5,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Import Safety Net (Relative Path)
+$safetyPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Safety\SystemRestore.psm1"
+if (Test-Path $safetyPath) { Import-Module $safetyPath -ErrorAction SilentlyContinue }
+
 function Show-OptimizerHeader {
     Clear-Host
     Write-Host '==================================================' -ForegroundColor Cyan
@@ -12,44 +16,61 @@ function Show-OptimizerHeader {
     Write-Host '==================================================' -ForegroundColor Cyan
 }
 
+function Invoke-UltimatePowerPlan {
+    Write-Host "[*] Unlocking Ultimate Performance Power Plan..." -ForegroundColor Yellow
+    
+    # Inject the Ultimate Performance GUID
+    $planGuid = "e9a42b02-d5df-448d-aa00-03f14749eb61"
+    powercfg -duplicatescheme $planGuid | Out-Null
+    
+    # Attempt to set it as active
+    $allPlans = powercfg -l
+    if ($allPlans -match $planGuid) {
+        powercfg -setactive $planGuid | Out-Null
+        Write-Host "[+] Ultimate Performance Plan unlocked and activated." -ForegroundColor Green
+    } else {
+        Write-Host "[-] Failed to activate Ultimate Performance." -ForegroundColor DarkYellow
+    }
+    Start-Sleep -Seconds 1
+}
+
+function Invoke-WindowsUpdateControl {
+    Write-Host "[*] Blocking Forced Windows Update Driver Installations..." -ForegroundColor Yellow
+    # Exclude drivers from Windows Quality Updates
+    $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
+    if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
+    Set-ItemProperty -Path $regPath -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    
+    Write-Host "[+] OEM Driver Overrides Prevented." -ForegroundColor Green
+    Start-Sleep -Seconds 1
+}
+
+function Invoke-TaskbarDebloat {
+    Write-Host "[*] Unpinning Chat, Widgets, and Copilot from Taskbar..." -ForegroundColor Yellow
+    $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    Set-ItemProperty -Path $regPath -Name "TaskbarMn" -Value 0 -Type DWord -ErrorAction SilentlyContinue # Chat
+    Set-ItemProperty -Path $regPath -Name "TaskbarDa" -Value 0 -Type DWord -ErrorAction SilentlyContinue # Widgets
+    Set-ItemProperty -Path $regPath -Name "ShowCopilotButton" -Value 0 -Type DWord -ErrorAction SilentlyContinue # Copilot
+    Write-Host "[+] UI Bloat Disabled." -ForegroundColor Green
+    Start-Sleep -Seconds 1
+}
+
 function Invoke-TelemetryNuke {
     Write-Host "[*] Nuking Telemetry & Data Collection..." -ForegroundColor Yellow
-    # Disable DiagTrack
     Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value 0 -Type DWord -ErrorAction SilentlyContinue
     Stop-Service "DiagTrack" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     Set-Service "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue
-    # Disable WAP Push
-    Stop-Service "dmwappushservice" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-    Set-Service "dmwappushservice" -StartupType Disabled -ErrorAction SilentlyContinue
-    Write-Host "[+] Telemetry Nuked successfully." -ForegroundColor Green
+    Write-Host "[+] Telemetry Nuked." -ForegroundColor Green
     Start-Sleep -Seconds 1
 }
 
 function Invoke-Debloat {
     param([string]$Profile)
     Write-Host "[*] Eradicating Bloatware ($Profile Profile)..." -ForegroundColor Yellow
+    $commonBloat = @("*Microsoft.BingNews*", "*Microsoft.GetHelp*", "*Microsoft.Getstarted*", "*Microsoft.Microsoft3DViewer*", "*king.com.CandyCrush*")
     
-    $commonBloat = @(
-        "*Microsoft.BingNews*",
-        "*Microsoft.GetHelp*",
-        "*Microsoft.Getstarted*",
-        "*Microsoft.Microsoft3DViewer*",
-        "*Microsoft.MicrosoftSolitaireCollection*",
-        "*Microsoft.WindowsFeedbackHub*",
-        "*Microsoft.ZuneVideo*",
-        "*king.com.CandyCrush*"
-    )
-    
-    if ($Profile -eq 'Performance') {
-        # Keep Xbox stuff, remove Office Hub
-        $commonBloat += "*Microsoft.MicrosoftOfficeHub*"
-    }
-    elseif ($Profile -eq 'Stability') {
-        # Keep Office, remove Xbox stuff
-        $commonBloat += "*Microsoft.XboxApp*"
-        $commonBloat += "*Microsoft.XboxGamingOverlay*"
-        $commonBloat += "*Microsoft.XboxIdentityProvider*"
-    }
+    if ($Profile -eq 'Performance') { $commonBloat += "*Microsoft.MicrosoftOfficeHub*" }
+    elseif ($Profile -eq 'Stability') { $commonBloat += "*Microsoft.XboxApp*"; $commonBloat += "*Microsoft.XboxGamingOverlay*" }
     
     foreach ($app in $commonBloat) {
         Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
@@ -61,13 +82,10 @@ function Invoke-Debloat {
 function Invoke-ServicesTweaks {
     param([string]$Profile)
     Write-Host "[*] Optimizing Services ($Profile Profile)..." -ForegroundColor Yellow
-    
-    # Disable Superfetch/SysMain (good for SSDs)
     Stop-Service "SysMain" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     Set-Service "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
     
     if ($Profile -eq 'Performance') {
-        # Disable Windows Search indexing for max disk performance
         Stop-Service "WSearch" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
         Set-Service "WSearch" -StartupType Disabled -ErrorAction SilentlyContinue
     }
@@ -96,9 +114,16 @@ if ($Menu) {
         
         Show-OptimizerHeader
         Write-Host "Applying $profile Tweaks. Please wait..." -ForegroundColor Cyan
+        
+        # Engage Safety Net Before Modifying
+        if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+        
         Invoke-TelemetryNuke
         Invoke-Debloat -Profile $profile
         Invoke-ServicesTweaks -Profile $profile
+        Invoke-UltimatePowerPlan
+        Invoke-WindowsUpdateControl
+        Invoke-TaskbarDebloat
         
         Write-Host "==================================================" -ForegroundColor Cyan
         Write-Host "Optimization Complete! A system reboot is recommended." -ForegroundColor Green

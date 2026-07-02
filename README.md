@@ -5,9 +5,11 @@ A profound, production-grade PowerShell utility suite for extreme Windows optimi
 ## Feature Modules
 
 - **Falkon System Cleaner**: Advanced disk space recovery featuring Safe, Aggressive, and Nuclear modes (with Windows Update cache and Component Store resetbase capabilities).
-- **Falkon System Optimizer (Tweaker)**: Automatically nukes telemetry, removes stubborn bloatware (Candy Crush, Xbox overlays, etc.), and disables heavy services (Superfetch/SysMain on SSDs) based on your selected profile (Maximum Performance vs. Maximum Stability).
+- **Falkon System Optimizer (Tweaker)**: Unlocks the hidden "Ultimate Performance" power plan, blocks forced OEM driver updates, debloats the Taskbar (Copilot/Widgets), and nukes telemetry.
 - **Falkon Network Optimizer**: Modifies the TCP/IP stack to lower network latency (disables Nagle's Algorithm via TCPNoDelay), resets Winsock, and halts bandwidth-hogging Delivery Optimization (P2P Windows Updates).
 - **Falkon Registry Optimizer**: Restores the classic Windows 10 context menu (bypassing the slow 'Show more options' delay) and injects `Win32PrioritySeparation` tweaks to prioritize foreground task processing.
+- **Falkon Package Store**: A silent, 1-click Winget batch installer for setting up fresh machines with Essential, Creator/Dev, or Gaming software packs in seconds.
+- **The Safety Net**: Fully automated Windows System Restore point generation. The tool forces a "Pre-Optimization Snapshot" before executing any major system modifications to guarantee absolute safety.
 
 ---
 

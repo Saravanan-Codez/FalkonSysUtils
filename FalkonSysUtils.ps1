@@ -134,6 +134,7 @@ while ($true) {
     Write-Host '[2] Falkon Registry Optimizer' -ForegroundColor Magenta
     Write-Host '[3] Falkon Network Optimizer' -ForegroundColor Blue
     Write-Host '[4] Falkon System Optimizer (Tweaker)' -ForegroundColor Yellow
+    Write-Host '[5] Falkon Essential App Installer (Winget)' -ForegroundColor DarkCyan
     Write-Host '[0] Exit' -ForegroundColor White
     Write-Host '==================================================' -ForegroundColor Cyan
     
@@ -158,6 +159,11 @@ while ($true) {
             $optPath = Join-Path $PSScriptRoot 'SystemOptimizer\SystemOptimizer.ps1'
             if (Test-Path -LiteralPath $optPath) { & $optPath -Menu }
             else { Write-Host "Module missing: $optPath" -ForegroundColor Red; Start-Sleep -Seconds 2 }
+        }
+        '5' {
+            $appPath = Join-Path $PSScriptRoot 'FalkonPackageStore\AppInstaller.ps1'
+            if (Test-Path -LiteralPath $appPath) { & $appPath -Menu }
+            else { Write-Host "Module missing: $appPath" -ForegroundColor Red; Start-Sleep -Seconds 2 }
         }
         '0' {
             Write-Host 'Goodbye!' -ForegroundColor Cyan
