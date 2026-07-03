@@ -59,7 +59,7 @@ function Read-UscConfig {
         return $merged
     }
     catch {
-        Write-Error "Failed to read configuration '$Path': $($_.Exception.Message)"
+        Write-Warning "Failed to read configuration '$Path': $($_.Exception.Message)"
         return $default
     }
 }

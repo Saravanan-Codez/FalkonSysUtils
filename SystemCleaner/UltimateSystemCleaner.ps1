@@ -391,7 +391,7 @@ function Show-UscResultsSummary {
         Write-Host " Reported Freed : $(Format-UscBytes -Bytes $Run.TotalBytesFreed)" -ForegroundColor Green
     }
 
-    $cleanOps = @($Run.Results) | Where-Object { $_.Category -in 'Clean','Checkpoint','Configure' }
+    $cleanOps = @(@($Run.Results) | Where-Object { $_.Category -in 'Clean','Checkpoint','Configure' })
     if ($cleanOps.Count -gt 0) {
         Write-Host '--------------------------------------------------' -ForegroundColor Cyan
         Write-Host ' OPERATIONS' -ForegroundColor Green
@@ -400,7 +400,7 @@ function Show-UscResultsSummary {
         }
     }
 
-    $failed = @($Run.Results) | Where-Object { $_.Status -eq 'Failed' }
+    $failed = @(@($Run.Results) | Where-Object { $_.Status -eq 'Failed' })
     if ($failed.Count -gt 0) {
         Write-Host '--------------------------------------------------' -ForegroundColor Cyan
         Write-Host " $($failed.Count) operation(s) failed - see log for details." -ForegroundColor Red

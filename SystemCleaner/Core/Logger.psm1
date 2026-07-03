@@ -96,8 +96,8 @@ function Write-UscLog {
     # Output to console streams
     switch ($Level) {
         'Warning' { Write-Warning $Message }
-        'Error' { Write-Error $Message -ErrorAction Continue }
-        'Critical' { Write-Error $Message -ErrorAction Continue }
+        'Error' { Write-Warning "[ERROR] $Message" }
+        'Critical' { Write-Warning "[CRITICAL] $Message" }
         default { Write-Verbose $Message }
     }
 }
