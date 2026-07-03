@@ -439,9 +439,6 @@ function Show-UscMenu {
         Clear-Host
         Show-UscLogo
         Write-Host " Privilege Context : $adminStatus" -ForegroundColor Yellow
-        if ($Config.DryRunDefault) {
-            Write-Host ' Dry Run Mode      : ON - cleanups simulate only (Settings to disable)' -ForegroundColor Yellow
-        }
         Write-Host '--------------------------------------------------' -ForegroundColor Cyan
         Write-Host '[1] Diagnose System Space (All Drives)' -ForegroundColor Green
         Write-Host '[2] Run Safe Cleanup' -ForegroundColor Yellow
@@ -488,7 +485,7 @@ function Show-UscConfigEditor {
         if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
         Write-Host '             CONFIGURATION SETTINGS               ' -ForegroundColor White -BackgroundColor Blue
         Write-Host '==================================================' -ForegroundColor Cyan
-        Write-Host '[1] Global Framework Options (Dry Run, Safety, etc.)'
+        Write-Host '[1] Global Framework Options (Safety, etc.)'
         Write-Host '[2] Safe Mode Target Cleaners'
         Write-Host '[3] Aggressive Mode Target Cleaners'
         Write-Host '[4] Nuclear Mode Target Cleaners'
