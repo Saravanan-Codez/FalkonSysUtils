@@ -99,8 +99,7 @@ function Get-UscBrowserCacheTargets {
 function Invoke-UscBrowserCacheCleanup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory)][psobject]$Config,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][psobject]$Config
     )
 
     $results = [System.Collections.Generic.List[object]]::new()
@@ -114,7 +113,7 @@ function Invoke-UscBrowserCacheCleanup {
         }
     }
 
-    if ($runningBrowsers.Count -gt 0 -and -not $WhatIfOnly) {
+    if ($runningBrowsers.Count -gt 0) {
         Write-UscLog -Level Warning -Message "Active browser processes detected: $($runningBrowsers -join ', ')."
         if ($Host.UI -ne $null -and ($Host.Name -eq 'ConsoleHost' -or $Host.Name -eq 'Visual Studio Code Host')) {
             Write-Host "[!] WARNING: Active browser processes detected ($($runningBrowsers -join ', '))." -ForegroundColor Yellow
@@ -163,11 +162,6 @@ function Invoke-UscBrowserCacheCleanup {
 
         foreach ($item in $items) {
             try {
-                if ($WhatIfOnly) { 
-                    $removed += [Int64]$item.Length
-                    continue 
-                }
-                
                 if ($PSCmdlet.ShouldProcess($item.FullName, "Remove browser cache ($($target.Name))")) {
                     $length = [Int64]$item.Length
                     Remove-Item -LiteralPath $item.FullName -Force -ErrorAction Stop
@@ -181,19 +175,17 @@ function Invoke-UscBrowserCacheCleanup {
         }
 
         # Try to clean empty folders under target paths
-        if (-not $WhatIfOnly) {
-            foreach ($scanPath in $pathsToScan) {
-                $subDirs = Get-ChildItem -LiteralPath $scanPath -Directory -Force -Recurse -ErrorAction SilentlyContinue |
-                    Sort-Object { $_.FullName.Length } -Descending
-                foreach ($dir in $subDirs) {
-                    try {
-                        $contents = @(Get-ChildItem -LiteralPath $dir.FullName -Force -ErrorAction SilentlyContinue)
-                        if ($contents.Count -eq 0) {
-                            Remove-Item -LiteralPath $dir.FullName -Force -ErrorAction Stop
-                        }
+        foreach ($scanPath in $pathsToScan) {
+            $subDirs = Get-ChildItem -LiteralPath $scanPath -Directory -Force -Recurse -ErrorAction SilentlyContinue |
+                Sort-Object { $_.FullName.Length } -Descending
+            foreach ($dir in $subDirs) {
+                try {
+                    $contents = @(Get-ChildItem -LiteralPath $dir.FullName -Force -ErrorAction SilentlyContinue)
+                    if ($contents.Count -eq 0) {
+                        Remove-Item -LiteralPath $dir.FullName -Force -ErrorAction Stop
                     }
-                    catch {}
                 }
+                catch {}
             }
         }
 

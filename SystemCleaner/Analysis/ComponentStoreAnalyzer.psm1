@@ -62,13 +62,8 @@ function Get-UscComponentStoreAnalysis {
 function Invoke-UscComponentStoreCleanup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [switch]$ResetBase,
-        [switch]$WhatIfOnly
+        [switch]$ResetBase
     )
-
-    if ($WhatIfOnly) {
-        return New-UscOperationResult -Name 'Component Store Cleanup' -Category Clean -Status Skipped -Message "Dry run: DISM StartComponentCleanup$(if ($ResetBase) { ' with ResetBase' }) would run"
-    }
 
     $arguments = '/Online','/Cleanup-Image','/StartComponentCleanup'
     if ($ResetBase) { $arguments += '/ResetBase' }

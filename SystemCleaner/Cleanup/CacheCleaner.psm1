@@ -1,4 +1,4 @@
-﻿Set-StrictMode -Version Latest
+Set-StrictMode -Version Latest
 
 function Get-UscRecycleBinSize {
     [CmdletBinding()]
@@ -19,14 +19,11 @@ function Get-UscRecycleBinSize {
 
 function Invoke-UscRecycleBinCleanup {
     [CmdletBinding(SupportsShouldProcess)]
-    param([switch]$WhatIfOnly)
+    param()
 
     $estimated = Get-UscRecycleBinSize
 
     try {
-        if ($WhatIfOnly) {
-            return New-UscOperationResult -Name 'Recycle Bin' -Category Clean -Status Simulated -BytesFreed $estimated -Message "Would clear $(Format-UscRecycleBytes -Bytes $estimated) from recycle bin"
-        }
         if ($PSCmdlet.ShouldProcess('Recycle Bin', 'Clear recycle bin')) {
             Clear-RecycleBin -Force -ErrorAction Stop
             return New-UscOperationResult -Name 'Recycle Bin' -Category Clean -Status Succeeded -BytesFreed $estimated -Message 'Recycle bin cleared'
@@ -49,13 +46,12 @@ function Format-UscRecycleBytes {
 function Invoke-UscWerCleanup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory)][psobject]$Config,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][psobject]$Config
     )
 
     $paths = @(
-        (Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportArchive')
-        (Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportQueue')
+        (Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportArchive'),
+        (Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportQueue'),
         (Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\WER')
     )
 
@@ -73,7 +69,7 @@ function Invoke-UscWerCleanup {
 
         foreach ($item in $items) {
             try {
-                if (-not $WhatIfOnly -and $PSCmdlet.ShouldProcess($item.FullName, 'Remove WER item')) {
+                if ($PSCmdlet.ShouldProcess($item.FullName, 'Remove WER item')) {
                     Remove-Item -LiteralPath $item.FullName -Recurse -Force -ErrorAction Stop
                 }
             }
@@ -83,22 +79,16 @@ function Invoke-UscWerCleanup {
             }
         }
 
-        $status = if ($WhatIfOnly) {
-            if ($failed -gt 0) { 'PartiallySucceeded' } else { 'Simulated' }
-        } elseif ($failed -gt 0 -and $size -gt 0) { 'PartiallySucceeded' } elseif ($failed -gt 0) { 'Failed' } else { 'Succeeded' }
+        $status = if ($failed -gt 0 -and $size -gt 0) { 'PartiallySucceeded' } elseif ($failed -gt 0) { 'Failed' } else { 'Succeeded' }
 
-        $results.Add((New-UscOperationResult -Name 'Windows Error Reporting' -Category Clean -Status $status -BytesFreed $size -Paths @($path) -Message $(if ($WhatIfOnly) { "$($items.Count) items would be removed" } else { "$($items.Count) candidate items, $failed failures" })))
+        $results.Add((New-UscOperationResult -Name 'Windows Error Reporting' -Category Clean -Status $status -BytesFreed $size -Paths @($path) -Message "$($items.Count) candidate items, $failed failures"))
     }
     return @($results)
 }
 
 function Invoke-UscDnsFlush {
     [CmdletBinding(SupportsShouldProcess)]
-    param([switch]$WhatIfOnly)
-
-    if ($WhatIfOnly) {
-        return New-UscOperationResult -Name 'DNS Resolver Cache' -Category Clean -Status Simulated -Message 'Would flush DNS resolver cache'
-    }
+    param()
 
     try {
         if ($PSCmdlet.ShouldProcess('DNS Resolver Cache', 'Flush DNS Cache')) {
@@ -114,7 +104,7 @@ function Invoke-UscDnsFlush {
 
 function Invoke-UscFontCacheCleanup {
     [CmdletBinding(SupportsShouldProcess)]
-    param([switch]$WhatIfOnly)
+    param()
 
     $fontCachePath = Join-Path $env:WINDIR 'ServiceProfiles\LocalService\AppData\Local\FontCache'
     $datFile = Join-Path $env:LOCALAPPDATA 'GDIPFONTCACHEV1.dat'
@@ -124,10 +114,6 @@ function Invoke-UscFontCacheCleanup {
     }
     if (Test-Path -LiteralPath $datFile) {
         $estimated += (Get-Item -LiteralPath $datFile -ErrorAction SilentlyContinue).Length
-    }
-
-    if ($WhatIfOnly) {
-        return New-UscOperationResult -Name 'Font Cache' -Category Clean -Status Simulated -BytesFreed $estimated -Message 'Would stop FontCache service and delete cache files'
     }
 
     if (-not $PSCmdlet.ShouldProcess('System Font Cache', 'Stop service and delete cache files')) {
@@ -185,7 +171,7 @@ function Invoke-UscFontCacheCleanup {
 
 function Invoke-UscDeliveryOptimizationCleanup {
     [CmdletBinding(SupportsShouldProcess)]
-    param([switch]$WhatIfOnly)
+    param()
 
     $doPath = Join-Path $env:ProgramData 'Microsoft\Network\Downloader'
     if (-not (Test-Path -LiteralPath $doPath)) {
@@ -193,10 +179,6 @@ function Invoke-UscDeliveryOptimizationCleanup {
     }
 
     $estimated = Measure-UscObjectSum -InputObject @(Get-ChildItem -LiteralPath $doPath -Force -Recurse -File -ErrorAction SilentlyContinue) -Property Length
-
-    if ($WhatIfOnly) {
-        return New-UscOperationResult -Name 'Delivery Optimization Cache' -Category Clean -Status Simulated -BytesFreed $estimated -Message 'Would purge Delivery Optimization cache'
-    }
 
     if ($PSCmdlet.ShouldProcess('Delivery Optimization Cache', 'Purge DO folder files')) {
         $serviceName = 'dosvc'
@@ -235,4 +217,3 @@ function Invoke-UscDeliveryOptimizationCleanup {
 }
 
 Export-ModuleMember -Function Get-UscRecycleBinSize, Invoke-UscRecycleBinCleanup, Invoke-UscWerCleanup, Invoke-UscDnsFlush, Invoke-UscFontCacheCleanup, Invoke-UscDeliveryOptimizationCleanup
-

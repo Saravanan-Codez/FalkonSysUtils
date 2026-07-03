@@ -23,8 +23,7 @@ function Get-UscTempTargets {
 function Invoke-UscTempCleanup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory)][psobject]$Config,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][psobject]$Config
     )
 
     $results = [System.Collections.Generic.List[object]]::new()
@@ -53,7 +52,7 @@ function Invoke-UscTempCleanup {
             foreach ($item in $rawItems) {
                 # Ensure it's not excluded and not a reparse point
                 if (-not (Test-UscExcludedPath -Path $item.FullName -Exclusions $Config.Exclusions) -and 
-                    -not ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+                     -not ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
                     $items.Add($item)
                 }
             }
@@ -71,11 +70,6 @@ function Invoke-UscTempCleanup {
             }
 
             $size = if ($null -eq $item.Length) { 0 } else { [Int64]$item.Length }
-            
-            if ($WhatIfOnly) {
-                $freed += $size
-                continue
-            }
 
             if ($PSCmdlet.ShouldProcess($item.FullName, "Remove file ($target.Name)")) {
                 $success = $false
@@ -100,7 +94,7 @@ function Invoke-UscTempCleanup {
         }
 
         # Try to clean up empty subfolders if recursive targets
-        if ($target.Recurse -and -not $WhatIfOnly) {
+        if ($target.Recurse) {
             foreach ($cleanPath in $pathsToClean) {
                 $folders = Get-ChildItem -LiteralPath $cleanPath -Directory -Force -Recurse -ErrorAction SilentlyContinue |
                     Sort-Object { $_.FullName.Length } -Descending
@@ -118,10 +112,8 @@ function Invoke-UscTempCleanup {
             }
         }
 
-        $status = if ($WhatIfOnly) {
-            if ($failed -gt 0) { 'PartiallySucceeded' } else { 'Simulated' }
-        } elseif ($failed -gt 0 -and $freed -gt 0) { 'PartiallySucceeded' } elseif ($failed -gt 0) { 'Failed' } else { 'Succeeded' }
-        $msg = if ($WhatIfOnly) { "$($items.Count) items would be removed" } else { "$($items.Count) candidate items, $failed failures" }
+        $status = if ($failed -gt 0 -and $freed -gt 0) { 'PartiallySucceeded' } elseif ($failed -gt 0) { 'Failed' } else { 'Succeeded' }
+        $msg = "$($items.Count) candidate items, $failed failures"
         $results.Add((New-UscOperationResult -Name $target.Name -Category Clean -Status $status -BytesBefore $before -BytesFreed $freed -Paths $pathsToClean -Message $msg))
     }
     return @($results)

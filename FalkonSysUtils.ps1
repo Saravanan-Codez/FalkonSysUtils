@@ -19,7 +19,6 @@ param(
     [switch]$RemoveScheduledTask,
     [switch]$Menu,
     [switch]$GenerateReport,
-    [switch]$WhatIfOnly,
     [switch]$ConfirmNuclear,
     [string]$ConfigPath
 )
@@ -186,7 +185,7 @@ while ($true) {
             $cleanerPath = Join-Path $PSScriptRoot 'SystemCleaner\UltimateSystemCleaner.ps1'
             if (Test-Path $cleanerPath) {
                 Write-Host "[*] Executing Safe Disk Cleanup..." -ForegroundColor Yellow
-                & $cleanerPath -Safe -WhatIfOnly:$false -GenerateReport
+                & $cleanerPath -Safe -GenerateReport
             }
 
             # 3. Registry Optimizer

@@ -1,4 +1,4 @@
-﻿<# 
+<# 
 .SYNOPSIS
 Ultimate System Cleaner - Enterprise Grade Windows Maintenance Utility
 .DESCRIPTION
@@ -23,7 +23,6 @@ param(
     [Parameter(ParameterSetName = 'Schedule')][switch]$RemoveScheduledTask,
     [Parameter(ParameterSetName = 'Menu')][switch]$Menu,
     [switch]$GenerateReport,
-    [switch]$WhatIfOnly,
     [switch]$ConfirmNuclear,
     [string]$ConfigPath
 )
@@ -190,7 +189,6 @@ function Invoke-UscCleanupMode {
     param(
         [Parameter(Mandatory)][ValidateSet('Safe','Aggressive','Nuclear')][string]$Mode,
         [Parameter(Mandatory)][psobject]$Config,
-        [switch]$WhatIfOnly,
         [switch]$ConfirmNuclear
     )
 
@@ -198,27 +196,27 @@ function Invoke-UscCleanupMode {
     Start-UscProgress -Activity "Ultimate System Cleaner: $Mode" -Status 'Preparing system cleaner...' -Id 1
 
     Write-Host ''
-    Write-Host " Starting $Mode cleanup$(if ($WhatIfOnly) { ' (DRY RUN)' } else { '' })..." -ForegroundColor Cyan
+    Write-Host " Starting $Mode cleanup..." -ForegroundColor Cyan
     Write-Host '--------------------------------------------------' -ForegroundColor DarkGray
 
-    if ($Config.CreateRestorePoint -and -not $WhatIfOnly) {
+    if ($Config.CreateRestorePoint) {
         Update-UscProgress -Activity "Ultimate System Cleaner: $Mode" -Status 'Creating System Restore Point...' -PercentComplete 5 -Id 1
-        Add-UscCleanupResult -Results $results -Result (New-UscRestorePoint -Description "Ultimate System Cleaner $Mode mode") -WhatIfOnly:$WhatIfOnly
+        Add-UscCleanupResult -Results $results -Result (New-UscRestorePoint -Description "Ultimate System Cleaner $Mode mode")
     }
 
     # Safe operations
     Update-UscProgress -Activity "Ultimate System Cleaner: $Mode" -Status 'Executing Safe Cleaners...' -PercentComplete 15 -Id 1
     if ($Config.Safe.Temp) { 
         Start-UscProgress -Activity 'Cleaning Temp Folders' -Status 'Processing User/System temporary items...' -Id 2 -ParentId 1
-        Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscTempCleanup -Config $Config -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+        Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscTempCleanup -Config $Config)
         Complete-UscProgress -Activity 'Cleaning Temp Folders' -Id 2
     }
     if ($Config.Safe.RecycleBin) { 
-        Add-UscCleanupResult -Results $results -Result (Invoke-UscRecycleBinCleanup -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+        Add-UscCleanupResult -Results $results -Result (Invoke-UscRecycleBinCleanup)
     }
     if ($Config.Safe.BrowserCache) {
         Start-UscProgress -Activity 'Cleaning Browser Cache' -Status 'Scanning chromium and gecko profiles...' -Id 3 -ParentId 1
-        Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscBrowserCacheCleanup -Config $Config -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+        Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscBrowserCacheCleanup -Config $Config)
         Complete-UscProgress -Activity 'Cleaning Browser Cache' -Id 3
     }
 
@@ -227,30 +225,30 @@ function Invoke-UscCleanupMode {
         Update-UscProgress -Activity "Ultimate System Cleaner: $Mode" -Status 'Executing Aggressive Cleaners...' -PercentComplete 40 -Id 1
         
         if ($Config.Aggressive.WindowsErrorReporting) { 
-            Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscWerCleanup -Config $Config -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscWerCleanup -Config $Config)
         }
         if ($Config.Aggressive.GpuShaderCache) { 
-            Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscGpuCacheCleanup -Config $Config -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscGpuCacheCleanup -Config $Config)
         }
         if ($Config.Aggressive.BrowserCache -and -not $Config.Safe.BrowserCache) { 
             Start-UscProgress -Activity 'Cleaning Browser Cache' -Status 'Scanning chromium and gecko profiles...' -Id 3 -ParentId 1
-            Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscBrowserCacheCleanup -Config $Config -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscBrowserCacheCleanup -Config $Config)
             Complete-UscProgress -Activity 'Cleaning Browser Cache' -Id 3
         }
         if ($Config.Aggressive.WindowsUpdateCache) { 
-            Add-UscCleanupResult -Results $results -Result (Invoke-UscWindowsUpdateCleanup -Config $Config -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResult -Results $results -Result (Invoke-UscWindowsUpdateCleanup -Config $Config)
         }
         if ($Config.EnableStorageSenseIntegration) { 
-            Add-UscCleanupResult -Results $results -Result (Invoke-UscStorageSense -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResult -Results $results -Result (Invoke-UscStorageSense)
         }
         if ($Config.Aggressive.DnsFlush) {
-            Add-UscCleanupResult -Results $results -Result (Invoke-UscDnsFlush -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResult -Results $results -Result (Invoke-UscDnsFlush)
         }
         if ($Config.Aggressive.FontCache) {
-            Add-UscCleanupResult -Results $results -Result (Invoke-UscFontCacheCleanup -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResult -Results $results -Result (Invoke-UscFontCacheCleanup)
         }
         if ($Config.Aggressive.DeliveryOptimization) {
-            Add-UscCleanupResult -Results $results -Result (Invoke-UscDeliveryOptimizationCleanup -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResult -Results $results -Result (Invoke-UscDeliveryOptimizationCleanup)
         }
     }
 
@@ -258,14 +256,14 @@ function Invoke-UscCleanupMode {
     if ($Mode -eq 'Nuclear') {
         Update-UscProgress -Activity "Ultimate System Cleaner: $Mode" -Status 'Executing Nuclear Cleaners...' -PercentComplete 75 -Id 1
         if (-not $ConfirmNuclear -and $Config.ConfirmNuclearActions) {
-            Add-UscCleanupResult -Results $results -Result (New-UscOperationResult -Name 'Nuclear Mode' -Category Clean -Status Skipped -Message 'Skipped destructive operations. Re-run with -ConfirmNuclear to unlock configured nuclear tasks.') -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResult -Results $results -Result (New-UscOperationResult -Name 'Nuclear Mode' -Category Clean -Status Skipped -Message 'Skipped destructive operations. Re-run with -ConfirmNuclear to unlock configured nuclear tasks.')
         }
         else {
             if ($Config.Nuclear.CrashDumps) { 
-                Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscDumpCleanup -Config $Config -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+                Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscDumpCleanup -Config $Config)
             }
-            Add-UscCleanupResult -Results $results -Result (Invoke-UscComponentStoreCleanup -ResetBase:([bool]$Config.Nuclear.ComponentStoreResetBase) -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
-            Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscNuclearRecoveryCleanup -Config $Config -Confirmed:$ConfirmNuclear -WhatIfOnly:$WhatIfOnly) -WhatIfOnly:$WhatIfOnly
+            Add-UscCleanupResult -Results $results -Result (Invoke-UscComponentStoreCleanup -ResetBase:([bool]$Config.Nuclear.ComponentStoreResetBase))
+            Add-UscCleanupResults -Results $results -NewResults @(Invoke-UscNuclearRecoveryCleanup -Config $Config -Confirmed:$ConfirmNuclear)
         }
     }
 
@@ -280,8 +278,7 @@ function New-UscRunRecord {
         [Parameter(Mandatory)][string]$RunId,
         [Parameter(Mandatory)][string]$Mode,
         [Parameter(Mandatory)][object[]]$Results,
-        [Parameter(Mandatory)][psobject]$Config,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][psobject]$Config
     )
 
     $total = Measure-UscObjectSum -InputObject $Results -Property BytesFreed
@@ -293,7 +290,7 @@ function New-UscRunRecord {
         ComputerName = $env:COMPUTERNAME
         UserName = [Environment]::UserName
         IsAdministrator = Test-UscAdministrator
-        WhatIfOnly = [bool]$WhatIfOnly
+        WhatIfOnly = $false
         TotalBytesFreed = [Int64]$total
         Before = $script:BeforeSnapshot
         After = @(Get-UscDriveSnapshot)
@@ -307,22 +304,20 @@ function Add-UscCleanupResult {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][System.Collections.Generic.List[object]]$Results,
-        [Parameter(Mandatory)][object]$Result,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][object]$Result
     )
     $Results.Add($Result)
-    Write-UscOperationConsole -Result $Result -WhatIfOnly:$WhatIfOnly
+    Write-UscOperationConsole -Result $Result
 }
 
 function Add-UscCleanupResults {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][System.Collections.Generic.List[object]]$Results,
-        [Parameter(Mandatory)][object[]]$NewResults,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][object[]]$NewResults
     )
     foreach ($result in @($NewResults)) {
-        Add-UscCleanupResult -Results $Results -Result $result -WhatIfOnly:$WhatIfOnly
+        Add-UscCleanupResult -Results $Results -Result $result
     }
 }
 
@@ -346,12 +341,6 @@ function Show-UscResultsSummary {
     Write-Host '       ULTIMATE SYSTEM CLEANER - RESULTS          ' -ForegroundColor White -BackgroundColor Blue
     Write-Host '==================================================' -ForegroundColor Cyan
 
-    if ($Run.WhatIfOnly -and -not $isAnalyzeMode) {
-        Write-Host '  *** DRY RUN - nothing was deleted ***' -ForegroundColor Yellow
-        Write-Host '  Toggle DryRunDefault in Settings, or confirm when prompted.' -ForegroundColor Gray
-        Write-Host '--------------------------------------------------' -ForegroundColor Cyan
-    }
-
     Write-Host " Run ID         : $RunId"
     Write-Host " Mode           : $($Run.Mode)"
     Write-Host " Duration       : $duration"
@@ -372,9 +361,8 @@ function Show-UscResultsSummary {
             Write-Host "    Change : $deltaText" -ForegroundColor $deltaColor
         }
 
-        $freedLabel = if ($Run.WhatIfOnly) { 'Est. Reclaimable' } else { 'Reported Freed' }
         Write-Host '--------------------------------------------------' -ForegroundColor Cyan
-        Write-Host " $freedLabel : $(Format-UscBytes -Bytes $Run.TotalBytesFreed)" -ForegroundColor Green
+        Write-Host " Reported Freed : $(Format-UscBytes -Bytes $Run.TotalBytesFreed)" -ForegroundColor Green
     }
 
     $cleanOps = @($Run.Results) | Where-Object { $_.Category -in 'Clean','Checkpoint','Configure' }
@@ -382,7 +370,7 @@ function Show-UscResultsSummary {
         Write-Host '--------------------------------------------------' -ForegroundColor Cyan
         Write-Host ' OPERATIONS' -ForegroundColor Green
         foreach ($op in $cleanOps) {
-            Write-UscOperationConsole -Result $op -WhatIfOnly:([bool]$Run.WhatIfOnly)
+            Write-UscOperationConsole -Result $op
         }
     }
 
@@ -523,19 +511,17 @@ function Show-UscConfigGlobal {
         if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
         Write-Host '            GLOBAL FRAMEWORK OPTIONS              ' -ForegroundColor White -BackgroundColor Blue
         Write-Host '==================================================' -ForegroundColor Cyan
-        Write-Host "[1] Toggle DryRunDefault          : $($Config.DryRunDefault)"
-        Write-Host "[2] Toggle CreateRestorePoint     : $($Config.CreateRestorePoint)"
-        Write-Host "[3] Toggle ConfirmNuclearActions  : $($Config.ConfirmNuclearActions)"
-        Write-Host "[4] Toggle Storage Sense Support  : $($Config.EnableStorageSenseIntegration)"
-        Write-Host '[5] Back to Settings Menu'
+        Write-Host "[1] Toggle CreateRestorePoint     : $($Config.CreateRestorePoint)"
+        Write-Host "[2] Toggle ConfirmNuclearActions  : $($Config.ConfirmNuclearActions)"
+        Write-Host "[3] Toggle Storage Sense Support  : $($Config.EnableStorageSenseIntegration)"
+        Write-Host '[4] Back to Settings Menu'
         Write-Host '==================================================' -ForegroundColor Cyan
         $choice = Read-Host 'Selection'
         switch ($choice) {
-            '1' { $Config.DryRunDefault = -not $Config.DryRunDefault }
-            '2' { $Config.CreateRestorePoint = -not $Config.CreateRestorePoint }
-            '3' { $Config.ConfirmNuclearActions = -not $Config.ConfirmNuclearActions }
-            '4' { $Config.EnableStorageSenseIntegration = -not $Config.EnableStorageSenseIntegration }
-            '5' { return }
+            '1' { $Config.CreateRestorePoint = -not $Config.CreateRestorePoint }
+            '2' { $Config.ConfirmNuclearActions = -not $Config.ConfirmNuclearActions }
+            '3' { $Config.EnableStorageSenseIntegration = -not $Config.EnableStorageSenseIntegration }
+            '4' { return }
         }
     }
 }
@@ -752,7 +738,6 @@ $config = Read-UscConfig -Path $script:ConfigPath
 $config.LogDirectory = [Environment]::ExpandEnvironmentVariables($config.LogDirectory)
 $config.ReportDirectory = [Environment]::ExpandEnvironmentVariables($config.ReportDirectory)
 
-$dryRun = [bool]($WhatIfOnly -or $config.DryRunDefault)
 $script:BeforeSnapshot = @(Get-UscDriveSnapshot)
 
 if ($PSCmdlet.ParameterSetName -eq 'Menu') {
@@ -783,7 +768,6 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
         $config = Read-UscConfig -Path $script:ConfigPath
         $config.LogDirectory = [Environment]::ExpandEnvironmentVariables($config.LogDirectory)
         $config.ReportDirectory = [Environment]::ExpandEnvironmentVariables($config.ReportDirectory)
-        $dryRun = [bool]($WhatIfOnly -or $config.DryRunDefault)
 
         $choice = Show-UscMenu -Config $config
         $mode = $choice['Mode']
@@ -794,19 +778,10 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
             $confirmedNuke = [bool]$choice['ConfirmNuclear']
         }
 
-        if ($dryRun -and $mode -in 'Safe','Aggressive','Nuclear') {
-            Write-Host ''
-            Write-Host ' Dry run is enabled - no files will be deleted.' -ForegroundColor Yellow
-            $runReal = Read-Host 'Run cleanup for real this time? (y/N)'
-            if ($runReal -match '^[yY]') {
-                $dryRun = $false
-            }
-        }
-
         $script:BeforeSnapshot = @(Get-UscDriveSnapshot)
         $script:Started = Get-Date
 
-        Write-UscLog -Level Audit -Message 'Run started' -Data @{ Mode = $mode; WhatIfOnly = $dryRun; ConfigPath = $script:ConfigPath }
+        Write-UscLog -Level Audit -Message 'Run started' -Data @{ Mode = $mode; ConfigPath = $script:ConfigPath }
         $results = [System.Collections.Generic.List[object]]::new()
 
         try {
@@ -911,10 +886,8 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
                     continue
                 }
                 default { 
-                    $results.AddRange(@(Invoke-UscCleanupMode -Mode $mode -Config $config -WhatIfOnly:$dryRun -ConfirmNuclear:$confirmedNuke)) 
-                    if (-not $dryRun) {
-                        Invoke-UscPostCleanVerification -Config $config -Mode $mode
-                    }
+                    $results.AddRange(@(Invoke-UscCleanupMode -Mode $mode -Config $config -ConfirmNuclear:$confirmedNuke)) 
+                    Invoke-UscPostCleanVerification -Config $config -Mode $mode
                 }
             }
         }
@@ -923,7 +896,7 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
             $results.Add((New-UscOperationResult -Name 'Run' -Category Clean -Status Failed -Message $_.Exception.Message))
         }
 
-        $run = New-UscRunRecord -RunId $runId -Mode $mode -Results @($results) -Config $config -WhatIfOnly:$dryRun
+        $run = New-UscRunRecord -RunId $runId -Mode $mode -Results @($results) -Config $config
         $reportPaths = [System.Collections.Generic.List[string]]::new()
 
         if ($GenerateReport -or $mode -in 'Diagnose','Analyze','DeepSpace','ComponentStore','Safe','Aggressive','Nuclear') {
@@ -959,7 +932,7 @@ else {
     elseif ($InstallScheduledTask) { $mode = 'InstallScheduledTask' }
     elseif ($RemoveScheduledTask) { $mode = 'RemoveScheduledTask' }
 
-    Write-UscLog -Level Audit -Message 'Run started' -Data @{ Mode = $mode; WhatIfOnly = $dryRun; ConfigPath = $script:ConfigPath }
+    Write-UscLog -Level Audit -Message 'Run started' -Data @{ Mode = $mode; ConfigPath = $script:ConfigPath }
     $results = [System.Collections.Generic.List[object]]::new()
 
     try {
@@ -1003,7 +976,7 @@ else {
                 $results.Add((Unregister-UscScheduledTask)) 
             }
             default { 
-                $results.AddRange(@(Invoke-UscCleanupMode -Mode $mode -Config $config -WhatIfOnly:$dryRun -ConfirmNuclear:$ConfirmNuclear)) 
+                $results.AddRange(@(Invoke-UscCleanupMode -Mode $mode -Config $config -ConfirmNuclear:$ConfirmNuclear)) 
             }
         }
     }
@@ -1012,7 +985,7 @@ else {
         $results.Add((New-UscOperationResult -Name 'Run' -Category Clean -Status Failed -Message $_.Exception.Message))
     }
 
-    $run = New-UscRunRecord -RunId $runId -Mode $mode -Results @($results) -Config $config -WhatIfOnly:$dryRun
+    $run = New-UscRunRecord -RunId $runId -Mode $mode -Results @($results) -Config $config
     $reportPaths = [System.Collections.Generic.List[string]]::new()
 
     if ($GenerateReport -or $mode -in 'Diagnose','Analyze','Safe','Aggressive','Nuclear') {
@@ -1028,7 +1001,7 @@ else {
     [pscustomobject]@{
         RunId = $runId
         Mode = $mode
-        WhatIfOnly = $dryRun
+        WhatIfOnly = $false
         TotalBytesFreed = $run.TotalBytesFreed
         LogFile = $logFile
         Reports = @($reportPaths)

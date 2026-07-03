@@ -1,8 +1,7 @@
 [CmdletBinding()]
 param(
     [switch]$Menu,
-    [switch]$Apply,
-    [switch]$WhatIfOnly
+    [switch]$Apply
 )
 
 $corePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Core\FalkonCore.psm1"
@@ -12,14 +11,8 @@ $safetyPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Safety\SystemRestore
 if (Test-Path $safetyPath) { Import-Module $safetyPath -ErrorAction SilentlyContinue }
 
 function Invoke-TcpOptimization {
-    param([switch]$WhatIfOnly)
     Write-Host "[*] Applying TCP/IP Optimization (Nagle's Algorithm & TCPNoDelay)..." -ForegroundColor Yellow
     
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would optimize TCP/IP Interfaces and settings." -ForegroundColor Green
-        return
-    }
-
     try {
         # TCP NoDelay and TcpAckFrequency (Nagle's Algorithm disable for gaming)
         $interfaces = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\*" -ErrorAction Stop
@@ -48,12 +41,7 @@ function Invoke-TcpOptimization {
 }
 
 function Invoke-DnsFlush {
-    param([switch]$WhatIfOnly)
     Write-Host "[*] Flushing DNS Cache and Resetting Winsock..." -ForegroundColor Yellow
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would flush DNS and reset Winsock." -ForegroundColor Green
-        return
-    }
     
     try {
         $out1 = ipconfig /flushdns 2>&1
@@ -70,15 +58,9 @@ function Invoke-DnsFlush {
 }
 
 function Invoke-DisableDeliveryOptimization {
-    param([switch]$WhatIfOnly)
     Write-Host "[*] Disabling P2P Windows Update Delivery Optimization..." -ForegroundColor Yellow
     $path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config"
     
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would disable Delivery Optimization." -ForegroundColor Green
-        return
-    }
-
     try {
         if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $path }
         if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
@@ -104,9 +86,9 @@ if ($Menu) {
         if ($choice -eq '1') {
             if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING TWEAKS" } else { Clear-Host }
             if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
-            Invoke-TcpOptimization -WhatIfOnly:$WhatIfOnly
-            Invoke-DnsFlush -WhatIfOnly:$WhatIfOnly
-            Invoke-DisableDeliveryOptimization -WhatIfOnly:$WhatIfOnly
+            Invoke-TcpOptimization
+            Invoke-DnsFlush
+            Invoke-DisableDeliveryOptimization
             
             if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         }
@@ -117,9 +99,9 @@ elseif ($Apply) {
     $appliedTweaks = [System.Collections.Generic.List[string]]::new()
 
     if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
-    Invoke-TcpOptimization -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('TCP/IP Tuning (CTCP, Window Scaling, Nagle Disable)')
-    Invoke-DnsFlush -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('DNS Cache Flush')
-    Invoke-DisableDeliveryOptimization -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Delivery Optimization (Bandwidth Hog) Disabled')
+    Invoke-TcpOptimization; $appliedTweaks.Add('TCP/IP Tuning (CTCP, Window Scaling, Nagle Disable)')
+    Invoke-DnsFlush; $appliedTweaks.Add('DNS Cache Flush')
+    Invoke-DisableDeliveryOptimization; $appliedTweaks.Add('Delivery Optimization (Bandwidth Hog) Disabled')
 
     $applyDuration = [Math]::Round(((Get-Date) - $applyStart).TotalSeconds, 1)
     Write-Host ""

@@ -6,7 +6,6 @@
   "ConfirmNuclearActions": true,
   "CreateRestorePoint": true,
   "EnableStorageSenseIntegration": true,
-  "DryRunDefault": true,
   "Exclusions": [
     "%USERPROFILE%\\Downloads\\Keep",
     "%ProgramData%\\Package Cache"

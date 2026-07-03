@@ -22,10 +22,7 @@ Describe 'UltimateSystemCleaner configuration' {
         }
     }
 
-    It 'defaults DryRunDefault to false for real cleanup' {
-        $config = Get-UscDefaultConfig
-        $config.DryRunDefault | Should Be $false
-    }
+
 
     It 'loads the default configuration' {
         $config = Get-UscDefaultConfig
@@ -87,12 +84,10 @@ Describe 'UltimateSystemCleaner result objects' {
         $result.BytesFreed | Should Be 42
     }
 
-    It 'distinguishes dry-run vs real byte accounting' {
+    It 'creates expected status properties' {
         $realResult = New-UscOperationResult -Name 'Real' -Category Clean -Status Succeeded -BytesFreed 1048576
-        $dryResult  = New-UscOperationResult -Name 'DryRun' -Category Clean -Status Simulated -BytesFreed 0
-        $realResult.BytesFreed | Should BeGreaterThan 0
-        $dryResult.BytesFreed | Should Be 0
-        $dryResult.Status | Should Be 'Simulated'
+        $realResult.BytesFreed | Should Be 1048576
+        $realResult.Status | Should Be 'Succeeded'
     }
 
     It 'accumulates total bytes across multiple results' {
@@ -210,9 +205,9 @@ Describe 'UltimateSystemCleaner report generation' {
 
 # ── Console Output ────────────────────────────────────────────────────────────
 Describe 'UltimateSystemCleaner operation console output' {
-    It 'accepts Simulated status on operation results' {
-        $result = New-UscOperationResult -Name 'Recycle Bin' -Category Clean -Status Simulated -BytesFreed 512 -Message 'Would clear'
-        $result.Status | Should Be 'Simulated'
+    It 'accepts custom messages' {
+        $result = New-UscOperationResult -Name 'Recycle Bin' -Category Clean -Status Succeeded -BytesFreed 512 -Message 'Cleared'
+        $result.Message | Should Be 'Cleared'
     }
 }
 

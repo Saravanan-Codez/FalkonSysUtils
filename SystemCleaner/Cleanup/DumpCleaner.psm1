@@ -3,14 +3,13 @@ Set-StrictMode -Version Latest
 function Invoke-UscDumpCleanup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory)][psobject]$Config,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][psobject]$Config
     )
 
     $paths = @(
-        (Join-Path $env:WINDIR 'MEMORY.DMP')
-        (Join-Path $env:WINDIR 'Minidump')
-        (Join-Path $env:WINDIR 'LiveKernelReports')
+        (Join-Path $env:WINDIR 'MEMORY.DMP'),
+        (Join-Path $env:WINDIR 'Minidump'),
+        (Join-Path $env:WINDIR 'LiveKernelReports'),
         (Join-Path $env:LOCALAPPDATA 'CrashDumps')
     )
 
@@ -32,7 +31,7 @@ function Invoke-UscDumpCleanup {
         $failed = 0
         foreach ($item in $items) {
             try {
-                if (-not $WhatIfOnly -and $PSCmdlet.ShouldProcess($item.FullName, 'Remove crash dump')) {
+                if ($PSCmdlet.ShouldProcess($item.FullName, 'Remove crash dump')) {
                     Remove-Item -LiteralPath $item.FullName -Force -ErrorAction Stop
                 }
             }
@@ -50,8 +49,7 @@ function Invoke-UscNuclearRecoveryCleanup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)][psobject]$Config,
-        [switch]$Confirmed,
-        [switch]$WhatIfOnly
+        [switch]$Confirmed
     )
 
     if (-not $Confirmed) {
@@ -62,10 +60,7 @@ function Invoke-UscNuclearRecoveryCleanup {
     
     if ($Config.Nuclear.DeleteShadowCopies) {
         $message = 'Deletes all volume shadow copies and removes a major rollback path'
-        if ($WhatIfOnly) {
-            $results.Add((New-UscOperationResult -Name 'Shadow Copies' -Category Clean -Status Skipped -Message "Dry run: $message"))
-        }
-        elseif ($PSCmdlet.ShouldProcess('All shadow copies', $message)) {
+        if ($PSCmdlet.ShouldProcess('All shadow copies', $message)) {
             Write-UscLog -Level Warning -Message 'Deleting all volume shadow copies via vssadmin...'
             $output = & vssadmin.exe delete shadows /all /quiet 2>&1
             $status = 'Succeeded'
@@ -78,10 +73,7 @@ function Invoke-UscNuclearRecoveryCleanup {
 
     if ($Config.Nuclear.RemoveRestorePoints) {
         $message = 'Removes system restore checkpoints'
-        if ($WhatIfOnly) {
-            $results.Add((New-UscOperationResult -Name 'Restore Points' -Category Clean -Status Skipped -Message "Dry run: $message"))
-        }
-        elseif ($PSCmdlet.ShouldProcess('System restore checkpoints', $message)) {
+        if ($PSCmdlet.ShouldProcess('System restore checkpoints', $message)) {
             Write-UscLog -Level Warning -Message 'Deleting oldest system restore checkpoints...'
             $output = & vssadmin.exe delete shadows /for=$env:SystemDrive /oldest /quiet 2>&1
             $status = 'Succeeded'
@@ -100,10 +92,7 @@ function Invoke-UscNuclearRecoveryCleanup {
             $files = @(Get-ChildItem -LiteralPath $updateRollbackPath -Force -Recurse -ErrorAction SilentlyContinue | Where-Object { -not $_.PSIsContainer })
             $size = Measure-UscObjectSum -InputObject $files -Property Length
             
-            if ($WhatIfOnly) {
-                $results.Add((New-UscOperationResult -Name 'Update Rollback Files' -Category Clean -Status Skipped -BytesFreed $size -Message "Dry run: $message"))
-            }
-            elseif ($PSCmdlet.ShouldProcess('Windows Update Rollback Files', $message)) {
+            if ($PSCmdlet.ShouldProcess('Windows Update Rollback Files', $message)) {
                 $failed = 0
                 foreach ($file in $files) {
                     try {
@@ -126,4 +115,3 @@ function Invoke-UscNuclearRecoveryCleanup {
 }
 
 Export-ModuleMember -Function Invoke-UscDumpCleanup, Invoke-UscNuclearRecoveryCleanup
-

@@ -1,8 +1,7 @@
 [CmdletBinding()]
 param(
     [switch]$Menu,
-    [switch]$Apply,
-    [switch]$WhatIfOnly
+    [switch]$Apply
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,13 +14,7 @@ $corePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Core\FalkonCore.psm1"
 if (Test-Path $corePath) { Import-Module $corePath -ErrorAction SilentlyContinue }
 
 function Invoke-UltimatePowerPlan {
-    param([switch]$WhatIfOnly)
     Write-Host "[*] Unlocking Ultimate Performance Power Plan..." -ForegroundColor Yellow
-    
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would unlock and activate Ultimate Performance power plan." -ForegroundColor Green
-        return
-    }
 
     try {
         # Inject the Ultimate Performance GUID
@@ -45,14 +38,8 @@ function Invoke-UltimatePowerPlan {
 }
 
 function Invoke-WindowsUpdateControl {
-    param([switch]$WhatIfOnly)
     Write-Host "[*] Blocking Forced Windows Update Driver Installations..." -ForegroundColor Yellow
     $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
-    
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would block forced driver updates via HKLM registry." -ForegroundColor Green
-        return
-    }
 
     try {
         if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
@@ -66,14 +53,8 @@ function Invoke-WindowsUpdateControl {
 }
 
 function Invoke-TaskbarDebloat {
-    param([switch]$WhatIfOnly)
     Write-Host "[*] Unpinning Chat, Widgets, and Copilot from Taskbar..." -ForegroundColor Yellow
     $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-    
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would unpin Widgets, Chat, and Copilot buttons." -ForegroundColor Green
-        return
-    }
 
     try {
         if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
@@ -88,14 +69,8 @@ function Invoke-TaskbarDebloat {
 }
 
 function Invoke-TelemetryNuke {
-    param([switch]$WhatIfOnly)
     Write-Host "[*] Nuking Telemetry & Data Collection..." -ForegroundColor Yellow
     $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
-    
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would disable system telemetry and diagnostics services." -ForegroundColor Green
-        return
-    }
 
     try {
         if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
@@ -110,17 +85,12 @@ function Invoke-TelemetryNuke {
 }
 
 function Invoke-Debloat {
-    param([string]$Profile, [switch]$WhatIfOnly)
+    param([string]$Profile)
     Write-Host "[*] Eradicating Bloatware ($Profile Profile)..." -ForegroundColor Yellow
     $commonBloat = @("*Microsoft.BingNews*", "*Microsoft.GetHelp*", "*Microsoft.Getstarted*", "*Microsoft.Microsoft3DViewer*", "*king.com.CandyCrush*")
     
     if ($Profile -eq 'Performance') { $commonBloat += "*Microsoft.MicrosoftOfficeHub*" }
     elseif ($Profile -eq 'Stability') { $commonBloat += "*Microsoft.XboxApp*"; $commonBloat += "*Microsoft.XboxGamingOverlay*" }
-    
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would uninstall: $($commonBloat -join ', ')" -ForegroundColor Green
-        return
-    }
 
     foreach ($app in $commonBloat) {
         try {
@@ -140,12 +110,8 @@ function Invoke-Debloat {
 }
 
 function Invoke-ServicesTweaks {
-    param([string]$Profile, [switch]$WhatIfOnly)
+    param([string]$Profile)
     Write-Host "[*] Optimizing Services ($Profile Profile)..." -ForegroundColor Yellow
-    if ($WhatIfOnly) {
-        Write-Host "[Dry Run] Would disable SysMain service$(if ($Profile -eq 'Performance') { ' and Windows Search indexing' })." -ForegroundColor Green
-        return
-    }
 
     try {
         Stop-Service "SysMain" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
@@ -187,12 +153,12 @@ if ($Menu) {
         # Engage Safety Net Before Modifying
         if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
         
-        Invoke-TelemetryNuke -WhatIfOnly:$WhatIfOnly
-        Invoke-Debloat -Profile $profile -WhatIfOnly:$WhatIfOnly
-        Invoke-ServicesTweaks -Profile $profile -WhatIfOnly:$WhatIfOnly
-        Invoke-UltimatePowerPlan -WhatIfOnly:$WhatIfOnly
-        Invoke-WindowsUpdateControl -WhatIfOnly:$WhatIfOnly
-        Invoke-TaskbarDebloat -WhatIfOnly:$WhatIfOnly
+        Invoke-TelemetryNuke
+        Invoke-Debloat -Profile $profile
+        Invoke-ServicesTweaks -Profile $profile
+        Invoke-UltimatePowerPlan
+        Invoke-WindowsUpdateControl
+        Invoke-TaskbarDebloat
         
         if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
     }
@@ -204,12 +170,12 @@ elseif ($Apply) {
     # Engage Safety Net Before Modifying
     if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
     
-    Invoke-TelemetryNuke -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Telemetry Disable & Registry Wipe')
-    Invoke-Debloat -Profile "Stability" -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Stability-Safe App Debloat')
-    Invoke-ServicesTweaks -Profile "Stability" -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Service Profile Optimization')
-    Invoke-UltimatePowerPlan -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Ultimate Performance Power Plan')
-    Invoke-WindowsUpdateControl -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('OEM Driver Override Block')
-    Invoke-TaskbarDebloat -WhatIfOnly:$WhatIfOnly; $appliedTweaks.Add('Taskbar Cleanup (Widgets, Chat, Copilot)')
+    Invoke-TelemetryNuke; $appliedTweaks.Add('Telemetry Disable & Registry Wipe')
+    Invoke-Debloat -Profile "Stability"; $appliedTweaks.Add('Stability-Safe App Debloat')
+    Invoke-ServicesTweaks -Profile "Stability"; $appliedTweaks.Add('Service Profile Optimization')
+    Invoke-UltimatePowerPlan; $appliedTweaks.Add('Ultimate Performance Power Plan')
+    Invoke-WindowsUpdateControl; $appliedTweaks.Add('OEM Driver Override Block')
+    Invoke-TaskbarDebloat; $appliedTweaks.Add('Taskbar Cleanup (Widgets, Chat, Copilot)')
 
     $applyDuration = [Math]::Round(((Get-Date) - $applyStart).TotalSeconds, 1)
     Write-Host ""

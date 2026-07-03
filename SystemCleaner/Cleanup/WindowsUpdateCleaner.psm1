@@ -3,8 +3,7 @@ Set-StrictMode -Version Latest
 function Invoke-UscWindowsUpdateCleanup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory)][psobject]$Config,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][psobject]$Config
     )
 
     $path = Join-Path $env:WINDIR 'SoftwareDistribution\Download'
@@ -15,10 +14,6 @@ function Invoke-UscWindowsUpdateCleanup {
     $items = @(Get-ChildItem -LiteralPath $path -Force -Recurse -ErrorAction SilentlyContinue |
         Where-Object { -not $_.PSIsContainer -and -not (Test-UscExcludedPath -Path $_.FullName -Exclusions $Config.Exclusions) })
     $size = Measure-UscObjectSum -InputObject $items -Property Length
-
-    if ($WhatIfOnly) {
-        return New-UscOperationResult -Name 'Windows Update Cache' -Category Clean -Status Simulated -BytesFreed $size -Paths @($path) -Message 'Dry run: update download cache would be purged'
-    }
 
     $services = @('wuauserv', 'bits', 'dosvc', 'CryptSvc')
     $stoppedServices = [System.Collections.Generic.List[string]]::new()
@@ -86,11 +81,7 @@ function Invoke-UscWindowsUpdateCleanup {
 
 function Invoke-UscStorageSense {
     [CmdletBinding(SupportsShouldProcess)]
-    param([switch]$WhatIfOnly)
-
-    if ($WhatIfOnly) {
-        return New-UscOperationResult -Name 'Storage Sense' -Category Configure -Status Skipped -Message 'Dry run: Storage Sense scheduled run would be requested'
-    }
+    param()
 
     try {
         if ($PSCmdlet.ShouldProcess('Storage Sense', 'Start built-in cleanup task')) {
@@ -106,4 +97,3 @@ function Invoke-UscStorageSense {
 }
 
 Export-ModuleMember -Function Invoke-UscWindowsUpdateCleanup, Invoke-UscStorageSense
-

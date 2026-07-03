@@ -1,4 +1,4 @@
-﻿Set-StrictMode -Version Latest
+Set-StrictMode -Version Latest
 
 $script:LogRoot = Join-Path $env:ProgramData 'UltimateSystemCleaner\Logs'
 $script:CurrentLogFile = $null
@@ -163,8 +163,7 @@ function Measure-UscObjectSum {
 function Write-UscOperationConsole {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][psobject]$Result,
-        [switch]$WhatIfOnly
+        [Parameter(Mandatory)][psobject]$Result
     )
 
     # Clear active console progress line to prevent overlapping characters
@@ -175,7 +174,6 @@ function Write-UscOperationConsole {
     $icon = switch ($Result.Status) {
         'Succeeded' { '[OK]' }
         'PartiallySucceeded' { '[!!]' }
-        'Simulated' { '[~]' }
         'Failed' { '[X]' }
         'Skipped' { '[--]' }
         default { '[..]' }
@@ -192,7 +190,6 @@ function Write-UscOperationConsole {
     $color = switch ($Result.Status) {
         'Succeeded' { 'Green' }
         'PartiallySucceeded' { 'Yellow' }
-        'Simulated' { 'Magenta' }
         'Failed' { 'Red' }
         'Skipped' { 'DarkGray' }
         default { 'Gray' }

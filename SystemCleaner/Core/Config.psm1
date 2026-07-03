@@ -10,7 +10,6 @@ function Get-UscDefaultConfig {
         ConfirmNuclearActions = $true
         CreateRestorePoint = $true
         EnableStorageSenseIntegration = $true
-        DryRunDefault = $false
         Exclusions = @(
             '%USERPROFILE%\Downloads\Keep',
             '%ProgramData%\Package Cache'
