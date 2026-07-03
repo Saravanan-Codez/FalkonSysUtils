@@ -46,16 +46,49 @@ function Invoke-PrioritySeparation {
     Start-Sleep -Seconds 1
 }
 
+function Invoke-StartupDelayTweak {
+    Write-FalkonLog -Level Info -Message "Disabling Windows Startup Delay..."
+    
+    $path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize"
+    try {
+        if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $path }
+        if (-not (Test-Path $path)) {
+            New-Item -Path $path -Force -ErrorAction Stop | Out-Null
+        }
+        Set-ItemProperty -Path $path -Name "StartupDelayInMSec" -Value 0 -Type DWord -ErrorAction Stop
+        Write-FalkonLog -Level Success -Message "Startup Delay Disabled."
+    } catch {
+        Write-FalkonLog -Level Error -Message "Failed to disable Startup Delay" -Exception $_.Exception
+    }
+    Start-Sleep -Seconds 1
+}
+
+function Invoke-MenuShowDelayTweak {
+    Write-FalkonLog -Level Info -Message "Optimizing Menu Show Delay (Instant menus)..."
+    
+    $path = "HKCU:\Control Panel\Desktop"
+    try {
+        if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $path }
+        Set-ItemProperty -Path $path -Name "MenuShowDelay" -Value "10" -Type String -ErrorAction Stop
+        Write-FalkonLog -Level Success -Message "Menu Show Delay Speedup Applied."
+    } catch {
+        Write-FalkonLog -Level Error -Message "Failed to optimize Menu Show Delay" -Exception $_.Exception
+    }
+    Start-Sleep -Seconds 1
+}
+
 if ($Menu) {
     while ($true) {
-        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "REGISTRY OPTIMIZER" } else { Clear-Host }
-        Write-Host "Select Registry Optimization Action:" -ForegroundColor Yellow
-        Write-Host "--------------------------------------------------" -ForegroundColor Cyan
-        Write-Host "[1] Apply Ultimate Registry Tweaks (Context Menu & Latency)" -ForegroundColor Green
-        Write-Host "[0] Back to Main Menu" -ForegroundColor White
-        Write-Host "==================================================" -ForegroundColor Cyan
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "REGISTRY OPTIMIZER"
+            Show-FalkonBox -Title "REGISTRY OPTIMIZER ACTIONS" -Lines @(
+                "[1] Apply Ultimate Registry Tweaks (Context Menu, Delay & Latency)",
+                "[0] Back to Main Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
         
-        $choice = Read-Host "Selection"
+        $choice = Read-Host "  Selection"
         if ($choice -eq '0') { return }
         if ($choice -eq '1') {
             if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING TWEAKS" } else { Clear-Host }
@@ -64,6 +97,8 @@ if ($Menu) {
             }
             Invoke-ContextMenuFix
             Invoke-PrioritySeparation
+            Invoke-StartupDelayTweak
+            Invoke-MenuShowDelayTweak
             
             if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         }
@@ -78,6 +113,8 @@ elseif ($Apply) {
     }
     Invoke-ContextMenuFix; $appliedTweaks.Add('Context Menu Latency Fix (Win 11)')
     Invoke-PrioritySeparation; $appliedTweaks.Add('Win32 Priority Separation (Foreground Boost)')
+    Invoke-StartupDelayTweak; $appliedTweaks.Add('Windows Startup Delay Disabled')
+    Invoke-MenuShowDelayTweak; $appliedTweaks.Add('Instant Windows Menu Show Delay (10ms)')
 
     $applyDuration = [Math]::Round(((Get-Date) - $applyStart).TotalSeconds, 1)
     Write-Host ""

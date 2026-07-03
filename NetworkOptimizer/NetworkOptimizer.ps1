@@ -73,16 +73,33 @@ function Invoke-DisableDeliveryOptimization {
     Start-Sleep -Seconds 1
 }
 
+function Invoke-NetworkThrottlingTweak {
+    Write-FalkonLog -Level Info -Message "Disabling Windows Network Throttling Index..."
+    $path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile"
+    try {
+        if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $path }
+        if (-not (Test-Path $path)) { New-Item -Path $path -Force -ErrorAction Stop | Out-Null }
+        Set-ItemProperty -Path $path -Name "NetworkThrottlingIndex" -Value 0xffffffff -Type DWord -ErrorAction Stop
+        Set-ItemProperty -Path $path -Name "SystemResponsiveness" -Value 0 -Type DWord -ErrorAction Stop
+        Write-FalkonLog -Level Success -Message "Network Throttling Disabled & Responsiveness optimized."
+    } catch {
+        Write-FalkonLog -Level Error -Message "Failed to optimize Network Throttling / Responsiveness" -Exception $_.Exception
+    }
+    Start-Sleep -Seconds 1
+}
+
 if ($Menu) {
     while ($true) {
-        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "NETWORK OPTIMIZER" } else { Clear-Host }
-        Write-Host "Select Network Action:" -ForegroundColor Yellow
-        Write-Host "--------------------------------------------------" -ForegroundColor Cyan
-        Write-Host "[1] Apply Ultimate Network Profile (Gaming & Streaming)" -ForegroundColor Green
-        Write-Host "[0] Back to Main Menu" -ForegroundColor White
-        Write-Host "==================================================" -ForegroundColor Cyan
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "NETWORK OPTIMIZER"
+            Show-FalkonBox -Title "NETWORK OPTIMIZER ACTIONS" -Lines @(
+                "[1] Apply Ultimate Network Profile (Gaming, Streaming & Throttling Fix)",
+                "[0] Back to Main Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
         
-        $choice = Read-Host "Selection"
+        $choice = Read-Host "  Selection"
         if ($choice -eq '0') { return }
         if ($choice -eq '1') {
             if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING TWEAKS" } else { Clear-Host }
@@ -92,6 +109,7 @@ if ($Menu) {
             Invoke-TcpOptimization
             Invoke-DnsFlush
             Invoke-DisableDeliveryOptimization
+            Invoke-NetworkThrottlingTweak
             
             if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         }
@@ -107,6 +125,7 @@ elseif ($Apply) {
     Invoke-TcpOptimization; $appliedTweaks.Add('TCP/IP Tuning (CTCP, Window Scaling, Nagle Disable)')
     Invoke-DnsFlush; $appliedTweaks.Add('DNS Cache Flush')
     Invoke-DisableDeliveryOptimization; $appliedTweaks.Add('Delivery Optimization (Bandwidth Hog) Disabled')
+    Invoke-NetworkThrottlingTweak; $appliedTweaks.Add('Network Throttling Index Disabled & Multimedia Priority Optimized')
 
     $applyDuration = [Math]::Round(((Get-Date) - $applyStart).TotalSeconds, 1)
     Write-Host ""

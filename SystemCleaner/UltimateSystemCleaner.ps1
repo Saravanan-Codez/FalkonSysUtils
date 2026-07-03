@@ -435,31 +435,38 @@ function Show-UscMenu {
     if (Test-UscAdministrator) { $adminStatus = 'Elevated (Admin)' }
 
     while ($true) {
-        Clear-Host
-        Show-UscLogo
-        Write-Host " Privilege Context : $adminStatus" -ForegroundColor Yellow
-        Write-Host '--------------------------------------------------' -ForegroundColor Cyan
-        Write-Host '[1] Diagnose System Space (All Drives)' -ForegroundColor Green
-        Write-Host '[2] Run Safe Cleanup' -ForegroundColor Yellow
-        Write-Host '[3] Run Aggressive Cleanup' -ForegroundColor Yellow
-        Write-Host '[4] Run Nuclear Cleanup' -ForegroundColor Red
-        Write-Host '[5] Configure Settings' -ForegroundColor Cyan
-        Write-Host '[6] Deep Disk Analysis (Top Files)' -ForegroundColor Green
-        Write-Host '[7] Component Store Analysis' -ForegroundColor Green
-        Write-Host '[8] Schedule Weekly Safe Clean' -ForegroundColor Cyan
-        Write-Host '[9] Code Signing Helper' -ForegroundColor DarkCyan
-        Write-Host '[H] Run History & Comparison' -ForegroundColor DarkCyan
-        Write-Host '[0] Exit' -ForegroundColor White
-        Write-Host '==================================================' -ForegroundColor Cyan
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo
+            Show-FalkonBox -Title "SYSTEM CONTEXT" -Lines @(
+                "Privilege Context : $adminStatus"
+            ) -Color "Gray"
+            Write-Host ""
+            Show-FalkonBox -Title "SYSTEM CLEANER ACTIONS" -Lines @(
+                "[1] Diagnose System Space (All Drives)",
+                "[2] Run Safe Cleanup",
+                "[3] Run Aggressive Cleanup",
+                "[4] Run Nuclear Cleanup",
+                "[5] Configure Settings",
+                "[6] Deep Disk Analysis (Top Files)",
+                "[7] Component Store Analysis",
+                "[8] Schedule Weekly Safe Clean",
+                "[9] Code Signing Helper",
+                "[H] Run History & Comparison",
+                "[0] Exit"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else {
+            Clear-Host
+        }
         
-        $selection = Read-Host 'Selection'
+        $selection = Read-Host '  Selection'
         switch ($selection) {
             '1' { return @{ Mode = 'Diagnose'; ConfirmNuclear = $false } }
             '2' { return @{ Mode = 'Safe'; ConfirmNuclear = $false } }
             '3' { return @{ Mode = 'Aggressive'; ConfirmNuclear = $false } }
             '4' { 
-                $confirm = Read-Host 'Nuclear actions can permanently remove rollback state. Are you sure? (y/N)'
-                if ($confirm -match '^[yY]') {
+                $confirm = Show-FalkonConfirm -PromptMessage "Nuclear actions can permanently remove rollback state. Proceed?"
+                if ($confirm) {
                     return @{ Mode = 'Nuclear'; ConfirmNuclear = $true }
                 }
                 break
@@ -471,7 +478,7 @@ function Show-UscMenu {
             '9' { Show-UscSigningHelper; break }
             { $_ -in 'h','H' } { return @{ Mode = 'History'; ConfirmNuclear = $false } }
             '0' { return @{ Mode = 'Exit'; ConfirmNuclear = $false } }
-            default { Write-Host 'Invalid choice, try again.'; Start-Sleep -Seconds 1 }
+            default { Write-Host '  Invalid choice, try again.'; Start-Sleep -Seconds 1 }
         }
     }
 }
@@ -480,40 +487,41 @@ function Show-UscConfigEditor {
     param([psobject]$Config)
 
     while ($true) {
-        Clear-Host
-        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
-        Write-Host '             CONFIGURATION SETTINGS               ' -ForegroundColor White -BackgroundColor Blue
-        Write-Host '==================================================' -ForegroundColor Cyan
-        Write-Host '[1] Global Framework Options (Safety, etc.)'
-        Write-Host '[2] Safe Mode Target Cleaners'
-        Write-Host '[3] Aggressive Mode Target Cleaners'
-        Write-Host '[4] Nuclear Mode Target Cleaners'
-        Write-Host '[5] View Exclusion Folders & Files'
-        Write-Host '[6] Reset to Recommended Default Settings' -ForegroundColor Yellow
-        Write-Host '[7] Save Configuration & Exit Editor' -ForegroundColor Green
-        Write-Host '==================================================' -ForegroundColor Cyan
-        $choice = Read-Host 'Selection'
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "CONFIGURATION SETTINGS"
+            Show-FalkonBox -Title "CONFIGURATION OPTIONS" -Lines @(
+                "[1] Global Framework Options (Safety, etc.)",
+                "[2] Safe Mode Target Cleaners",
+                "[3] Aggressive Mode Target Cleaners",
+                "[4] Nuclear Mode Target Cleaners",
+                "[5] View Exclusion Folders & Files",
+                "[6] Reset to Recommended Default Settings",
+                "[7] Save Configuration & Exit Editor"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
+        $choice = Read-Host '  Selection'
         switch ($choice) {
             '1' { Show-UscConfigGlobal -Config $Config }
             '2' { Show-UscConfigSafe -Config $Config }
             '3' { Show-UscConfigAggressive -Config $Config }
             '4' { Show-UscConfigNuclear -Config $Config }
             '5' { 
-                Write-Host 'Exclusions:'
-                $Config.Exclusions | ForEach-Object { Write-Host " - $_" -ForegroundColor Yellow }
-                $null = Read-Host 'Press Enter to continue'
+                Write-Host '  Exclusions:'
+                $Config.Exclusions | ForEach-Object { Write-Host "   - $_" -ForegroundColor Yellow }
+                $null = Read-Host '  Press Enter to continue'
             }
             '6' {
                 $defaults = Get-UscDefaultConfig
                 foreach ($prop in $defaults.psobject.Properties) {
                     $Config.($prop.Name) = $prop.Value
                 }
-                Write-Host 'Configuration reset to default settings.' -ForegroundColor Green
+                Write-Host '  Configuration reset to default settings.' -ForegroundColor Green
                 Start-Sleep -Seconds 1
             }
             '7' { 
                 Save-UscConfig -Config $Config -Path $script:ConfigPath
-                Write-Host 'Settings saved successfully.' -ForegroundColor Green
+                Write-Host '  Settings saved successfully.' -ForegroundColor Green
                 Start-Sleep -Seconds 1
                 return
             }
@@ -524,16 +532,17 @@ function Show-UscConfigEditor {
 function Show-UscConfigGlobal {
     param([psobject]$Config)
     while ($true) {
-        Clear-Host
-        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
-        Write-Host '            GLOBAL FRAMEWORK OPTIONS              ' -ForegroundColor White -BackgroundColor Blue
-        Write-Host '==================================================' -ForegroundColor Cyan
-        Write-Host "[1] Toggle CreateRestorePoint     : $($Config.CreateRestorePoint)"
-        Write-Host "[2] Toggle ConfirmNuclearActions  : $($Config.ConfirmNuclearActions)"
-        Write-Host "[3] Toggle Storage Sense Support  : $($Config.EnableStorageSenseIntegration)"
-        Write-Host '[4] Back to Settings Menu'
-        Write-Host '==================================================' -ForegroundColor Cyan
-        $choice = Read-Host 'Selection'
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "GLOBAL FRAMEWORK OPTIONS"
+            Show-FalkonBox -Title "GLOBAL FRAMEWORK OPTIONS" -Lines @(
+                "[1] Toggle CreateRestorePoint     : $($Config.CreateRestorePoint)",
+                "[2] Toggle ConfirmNuclearActions  : $($Config.ConfirmNuclearActions)",
+                "[3] Toggle Storage Sense Support  : $($Config.EnableStorageSenseIntegration)",
+                "[4] Back to Settings Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
+        $choice = Read-Host '  Selection'
         switch ($choice) {
             '1' { $Config.CreateRestorePoint = -not $Config.CreateRestorePoint }
             '2' { $Config.ConfirmNuclearActions = -not $Config.ConfirmNuclearActions }
@@ -546,17 +555,18 @@ function Show-UscConfigGlobal {
 function Show-UscConfigSafe {
     param([psobject]$Config)
     while ($true) {
-        Clear-Host
-        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
-        Write-Host '            SAFE CLEANER CONFIGURATION            ' -ForegroundColor White -BackgroundColor Blue
-        Write-Host '==================================================' -ForegroundColor Cyan
-        Write-Host "[1] Toggle Temp Directories       : $($Config.Safe.Temp)"
-        Write-Host "[2] Toggle Recycle Bin Clear      : $($Config.Safe.RecycleBin)"
-        Write-Host "[3] Toggle Windows Thumbnails     : $($Config.Safe.Thumbnails)"
-        Write-Host "[4] Toggle Browser Cache Clear    : $($Config.Safe.BrowserCache)"
-        Write-Host '[5] Back to Settings Menu'
-        Write-Host '==================================================' -ForegroundColor Cyan
-        $choice = Read-Host 'Selection'
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "SAFE CLEANER CONFIGURATION"
+            Show-FalkonBox -Title "SAFE CLEANER CONFIGURATION" -Lines @(
+                "[1] Toggle Temp Directories       : $($Config.Safe.Temp)",
+                "[2] Toggle Recycle Bin Clear      : $($Config.Safe.RecycleBin)",
+                "[3] Toggle Windows Thumbnails     : $($Config.Safe.Thumbnails)",
+                "[4] Toggle Browser Cache Clear    : $($Config.Safe.BrowserCache)",
+                "[5] Back to Settings Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
+        $choice = Read-Host '  Selection'
         switch ($choice) {
             '1' { $Config.Safe.Temp = -not $Config.Safe.Temp }
             '2' { $Config.Safe.RecycleBin = -not $Config.Safe.RecycleBin }
@@ -570,20 +580,21 @@ function Show-UscConfigSafe {
 function Show-UscConfigAggressive {
     param([psobject]$Config)
     while ($true) {
-        Clear-Host
-        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
-        Write-Host '         AGGRESSIVE CLEANER CONFIGURATION         ' -ForegroundColor White -BackgroundColor Blue
-        Write-Host '==================================================' -ForegroundColor Cyan
-        Write-Host "[1] Toggle Windows Error Rep.     : $($Config.Aggressive.WindowsErrorReporting)"
-        Write-Host "[2] Toggle Windows Update Cache   : $($Config.Aggressive.WindowsUpdateCache)"
-        Write-Host "[3] Toggle GPU Shader Cache       : $($Config.Aggressive.GpuShaderCache)"
-        Write-Host "[4] Toggle Browser Cache Clear    : $($Config.Aggressive.BrowserCache)"
-        Write-Host "[5] Toggle DNS Cache Flush        : $($Config.Aggressive.DnsFlush)"
-        Write-Host "[6] Toggle Windows Font Cache     : $($Config.Aggressive.FontCache)"
-        Write-Host "[7] Toggle Delivery Optimization  : $($Config.Aggressive.DeliveryOptimization)"
-        Write-Host '[8] Back to Settings Menu'
-        Write-Host '==================================================' -ForegroundColor Cyan
-        $choice = Read-Host 'Selection'
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "AGGRESSIVE CLEANER CONFIGURATION"
+            Show-FalkonBox -Title "AGGRESSIVE CLEANER CONFIGURATION" -Lines @(
+                "[1] Toggle Windows Error Rep.     : $($Config.Aggressive.WindowsErrorReporting)",
+                "[2] Toggle Windows Update Cache   : $($Config.Aggressive.WindowsUpdateCache)",
+                "[3] Toggle GPU Shader Cache       : $($Config.Aggressive.GpuShaderCache)",
+                "[4] Toggle Browser Cache Clear    : $($Config.Aggressive.BrowserCache)",
+                "[5] Toggle DNS Cache Flush        : $($Config.Aggressive.DnsFlush)",
+                "[6] Toggle Windows Font Cache     : $($Config.Aggressive.FontCache)",
+                "[7] Toggle Delivery Optimization  : $($Config.Aggressive.DeliveryOptimization)",
+                "[8] Back to Settings Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
+        $choice = Read-Host '  Selection'
         switch ($choice) {
             '1' { $Config.Aggressive.WindowsErrorReporting = -not $Config.Aggressive.WindowsErrorReporting }
             '2' { $Config.Aggressive.WindowsUpdateCache = -not $Config.Aggressive.WindowsUpdateCache }
@@ -600,18 +611,19 @@ function Show-UscConfigAggressive {
 function Show-UscConfigNuclear {
     param([psobject]$Config)
     while ($true) {
-        Clear-Host
-        if (Get-Command Show-UscLogo -ErrorAction SilentlyContinue) { Show-UscLogo }
-        Write-Host '          NUCLEAR CLEANER CONFIGURATION           ' -ForegroundColor White -BackgroundColor Blue
-        Write-Host '==================================================' -ForegroundColor Cyan
-        Write-Host "[1] Toggle System Crash Dumps     : $($Config.Nuclear.CrashDumps)"
-        Write-Host "[2] Toggle WinSxS ResetBase       : $($Config.Nuclear.ComponentStoreResetBase)"
-        Write-Host "[3] Toggle Delete Shadow Copies   : $($Config.Nuclear.DeleteShadowCopies)"
-        Write-Host "[4] Toggle Remove Restore Points  : $($Config.Nuclear.RemoveRestorePoints)"
-        Write-Host "[5] Toggle Purge Update Rollbacks : $($Config.Nuclear.PurgeUpdateRollback)"
-        Write-Host '[6] Back to Settings Menu'
-        Write-Host '==================================================' -ForegroundColor Cyan
-        $choice = Read-Host 'Selection'
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "NUCLEAR CLEANER CONFIGURATION"
+            Show-FalkonBox -Title "NUCLEAR CLEANER CONFIGURATION" -Lines @(
+                "[1] Toggle System Crash Dumps     : $($Config.Nuclear.CrashDumps)",
+                "[2] Toggle WinSxS ResetBase       : $($Config.Nuclear.ComponentStoreResetBase)",
+                "[3] Toggle Delete Shadow Copies   : $($Config.Nuclear.DeleteShadowCopies)",
+                "[4] Toggle Remove Restore Points  : $($Config.Nuclear.RemoveRestorePoints)",
+                "[5] Toggle Purge Update Rollbacks : $($Config.Nuclear.PurgeUpdateRollback)",
+                "[6] Back to Settings Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
+        $choice = Read-Host '  Selection'
         switch ($choice) {
             '1' { $Config.Nuclear.CrashDumps = -not $Config.Nuclear.CrashDumps }
             '2' { $Config.Nuclear.ComponentStoreResetBase = -not $Config.Nuclear.ComponentStoreResetBase }
@@ -624,46 +636,50 @@ function Show-UscConfigNuclear {
 }
 
 function Show-UscSigningHelper {
-    Clear-Host
-    Write-Host '==================================================' -ForegroundColor Cyan
-    Write-Host '            CODE-SIGNING UTILITY MENU             ' -ForegroundColor White -BackgroundColor Blue
-    Write-Host '==================================================' -ForegroundColor Cyan
-    Write-Host '[1] Generate Code-Signing Certificate & Trust Local'
-    Write-Host '[2] Sign All Cleaner Script Modules (*.ps1, *.psm1)'
-    Write-Host '[3] Back'
-    Write-Host '==================================================' -ForegroundColor Cyan
-    $choice = Read-Host 'Selection'
-    if ($choice -eq '1') {
-        if (-not (Test-UscAdministrator)) {
-            Write-Host 'Administrator context is required to trust local certificate.' -ForegroundColor Red
-            $null = Read-Host 'Press Enter to continue'
-            return
+    while ($true) {
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "CODE-SIGNING UTILITY"
+            Show-FalkonBox -Title "CODE-SIGNING OPTIONS" -Lines @(
+                "[1] Generate Code-Signing Certificate & Trust Local",
+                "[2] Sign All Cleaner Script Modules (*.ps1, *.psm1)",
+                "[0] Back to Main Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
+        $choice = Read-Host '  Selection'
+        if ($choice -eq '0') { return }
+        if ($choice -eq '1') {
+            if (-not (Test-UscAdministrator)) {
+                Write-Host '  Administrator context is required to trust local certificate.' -ForegroundColor Red
+                $null = Read-Host '  Press Enter to continue'
+                return
+            }
+            try {
+                $cert = New-UscSelfSignedCert -ImportToRoot -ErrorAction Stop
+                Write-Host "  Self-signed certificate created successfully: $($cert.Thumbprint)" -ForegroundColor Green
+            }
+            catch {
+                Write-Host "  Error creating certificate: $_" -ForegroundColor Red
+            }
+            $null = Read-Host '  Press Enter to continue'
         }
-        try {
-            $cert = New-UscSelfSignedCert -ImportToRoot -ErrorAction Stop
-            Write-Host "Self-signed certificate created successfully: $($cert.Thumbprint)" -ForegroundColor Green
+        elseif ($choice -eq '2') {
+            # Find a code signing cert in CurrentUser
+            $certs = @(Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert -ErrorAction SilentlyContinue)
+            if ($certs.Count -eq 0) {
+                Write-Host '  No code signing certificates found. Please run Option [1] first to generate one.' -ForegroundColor Red
+                $null = Read-Host '  Press Enter to continue'
+                return
+            }
+            $cert = $certs[0]
+            Write-Host "  Signing cleaner scripts with certificate: $($cert.Subject)..."
+            $files = Get-ChildItem $PSScriptRoot -Include *.ps1,*.psm1 -Recurse
+            foreach ($file in $files) {
+                Set-UscFileSignature -Path $file.FullName -Certificate $cert | Out-Null
+            }
+            Write-Host '  All cleaner files signed. Re-run app to verify signature status.' -ForegroundColor Green
+            $null = Read-Host '  Press Enter to continue'
         }
-        catch {
-            Write-Host "Error creating certificate: $_" -ForegroundColor Red
-        }
-        $null = Read-Host 'Press Enter to continue'
-    }
-    elseif ($choice -eq '2') {
-        # Find a code signing cert in CurrentUser
-        $certs = @(Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert -ErrorAction SilentlyContinue)
-        if ($certs.Count -eq 0) {
-            Write-Host 'No code signing certificates found. Please run Option [1] first to generate one.' -ForegroundColor Red
-            $null = Read-Host 'Press Enter to continue'
-            return
-        }
-        $cert = $certs[0]
-        Write-Host "Signing cleaner scripts with certificate: $($cert.Subject)..."
-        $files = Get-ChildItem $PSScriptRoot -Include *.ps1,*.psm1 -Recurse
-        foreach ($file in $files) {
-            Set-UscFileSignature -Path $file.FullName -Certificate $cert | Out-Null
-        }
-        Write-Host 'All cleaner files signed. Re-run app to verify signature status.' -ForegroundColor Green
-        $null = Read-Host 'Press Enter to continue'
     }
 }
 
@@ -936,6 +952,7 @@ if ($PSCmdlet.ParameterSetName -eq 'Menu') {
 }
 else {
     # Non-interactive CLI Mode (runs once)
+    $global:UscNonInteractive = $true
     $runId = Get-Date -Format 'yyyyMMdd-HHmmss'
     $script:Started = Get-Date
     $logFile = Initialize-UscLogger -LogDirectory $config.LogDirectory -RunId $runId

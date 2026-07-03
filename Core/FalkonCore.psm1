@@ -3,22 +3,91 @@ function Show-FalkonLogo {
         [string]$SubTitle = ""
     )
     Clear-Host
-    Write-Host '==================================================' -ForegroundColor Cyan
-    Write-Host '               FALKON SYSTEM UTILS' -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host '==================================================' -ForegroundColor Cyan
+    Write-Host '  ╔══════════════════════════════════════════════════════════╗' -ForegroundColor Cyan
+    Write-Host '  ║                   FALKON SYSTEM UTILS                    ║' -ForegroundColor White -BackgroundColor DarkBlue
+    Write-Host '  ╚══════════════════════════════════════════════════════════╝' -ForegroundColor Cyan
     
     if (-not [string]::IsNullOrWhiteSpace($SubTitle)) {
-        $padLength = [math]::Max(0, (50 - $SubTitle.Length) / 2)
-        $paddedTitle = $SubTitle.PadLeft($padLength + $SubTitle.Length).PadRight(50)
-        Write-Host $paddedTitle -ForegroundColor White -BackgroundColor DarkMagenta
-        Write-Host '==================================================' -ForegroundColor Cyan
+        $paddedLength = [math]::Max(0, [math]::Floor((58 - $SubTitle.Length) / 2))
+        $leftPad = $SubTitle.PadLeft($paddedLength + $SubTitle.Length)
+        $fullTitle = $leftPad.PadRight(58)
+        Write-Host "  ╟──────────────────────────────────────────────────────────╢" -ForegroundColor Cyan
+        Write-Host "  ║$fullTitle║" -ForegroundColor Magenta -BackgroundColor Black
+        Write-Host "  ╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     }
 }
 
+function Show-FalkonBox {
+    param(
+        [Parameter(Mandatory)][string]$Title,
+        [Parameter(Mandatory)][string[]]$Lines,
+        [string]$Color = 'Cyan'
+    )
+    # Find max line length, cap at 58
+    $maxLength = $Title.Length
+    foreach ($line in $Lines) {
+        if ($line.Length -gt $maxLength) { $maxLength = $line.Length }
+    }
+    $maxLength = [math]::Min(58, [math]::Max($maxLength, 20))
+    
+    $top = '╔' + ('═' * ($maxLength + 2)) + '╗'
+    $bottom = '╚' + ('═' * ($maxLength + 2)) + '╝'
+    
+    Write-Host "  $top" -ForegroundColor $Color
+    
+    # Title centered
+    $tPad = [math]::Max(0, [math]::Floor(($maxLength - $Title.Length) / 2))
+    $tLine = $Title.PadLeft($tPad + $Title.Length).PadRight($maxLength)
+    Write-Host "  ║ $tLine ║" -ForegroundColor White -BackgroundColor DarkBlue
+    
+    Write-Host ("  ╟" + ('─' * ($maxLength + 2)) + "╢") -ForegroundColor $Color
+    
+    foreach ($line in $Lines) {
+        $lText = $line
+        if ($lText.Length -gt $maxLength) {
+            $lText = $lText.Substring(0, $maxLength - 3) + '...'
+        }
+        $lText = $lText.PadRight($maxLength)
+        Write-Host "  ║ $lText ║" -ForegroundColor Gray
+    }
+    Write-Host "  $bottom" -ForegroundColor $Color
+}
+
+function Show-FalkonConfirm {
+    param(
+        [Parameter(Mandatory)][string]$PromptMessage
+    )
+    if ($global:UscNonInteractive) { return $true }
+    
+    # Draw confirmation box
+    Show-FalkonBox -Title "CONFIRMATION REQUIRED" -Lines @($PromptMessage, "", "  [Y] Yes  /  [N] No") -Color "Yellow"
+    Write-Host ""
+    
+    $resp = Read-Host "  Your choice"
+    return ($resp -match '^[yY]')
+}
+
+function Show-FalkonMenu {
+    param(
+        [Parameter(Mandatory)][string]$Title,
+        [Parameter(Mandatory)][string]$SubTitle,
+        [Parameter(Mandatory)][object[]]$Options
+    )
+    
+    Show-FalkonLogo -SubTitle $SubTitle
+    
+    $lines = [System.Collections.Generic.List[string]]::new()
+    foreach ($opt in $Options) {
+        $lines.Add(" [$($opt.Key)] $($opt.Label)")
+    }
+    
+    Show-FalkonBox -Title $Title -Lines $lines.ToArray() -Color 'Cyan'
+    Write-Host ""
+}
+
 function Invoke-FalkonPause {
-    Write-Host "==================================================" -ForegroundColor Cyan
-    Write-Host "Operation Complete." -ForegroundColor Green
-    Write-Host "Press any key to return to the menu..." -ForegroundColor Gray
+    Write-Host ""
+    Show-FalkonBox -Title "OPERATION COMPLETE" -Lines @("The operation has finished running.", "Press any key to return to the menu...") -Color "Green"
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
@@ -127,4 +196,4 @@ function Backup-FalkonRegistryKey {
     }
 }
 
-Export-ModuleMember -Function Show-FalkonLogo, Invoke-FalkonPause, Initialize-FalkonLogger, Write-FalkonLog, Backup-FalkonRegistryKey
+Export-ModuleMember -Function Show-FalkonLogo, Invoke-FalkonPause, Initialize-FalkonLogger, Write-FalkonLog, Backup-FalkonRegistryKey, Show-FalkonBox, Show-FalkonConfirm, Show-FalkonMenu

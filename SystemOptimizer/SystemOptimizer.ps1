@@ -61,7 +61,6 @@ function Invoke-TaskbarDebloat {
         if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
         Set-ItemProperty -Path $regPath -Name "TaskbarMn" -Value 0 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path $regPath -Name "TaskbarDa" -Value 0 -Type DWord -ErrorAction Stop
-        Set-ItemProperty -Path $regPath -Name "ShowCopilotButton" -Value 0 -Type DWord -ErrorAction Stop
         Write-FalkonLog -Level Success -Message "UI Bloat Disabled."
     } catch {
         Write-FalkonLog -Level Error -Message "Failed to unpin Taskbar bloat" -Exception $_.Exception
@@ -83,8 +82,25 @@ function Invoke-TelemetryNuke {
         
         Stop-Service "dmwappushservice" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
         Set-Service "dmwappushservice" -StartupType Disabled -ErrorAction SilentlyContinue
+
+        # Disable scheduled telemetry tasks
+        $telemetryTasks = @(
+            "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
+            "\Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask",
+            "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
+            "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
+            "\Microsoft\Windows\Application Experience\ProgramDataUpdater"
+        )
+        foreach ($task in $telemetryTasks) {
+            $taskName = Split-Path $task -Leaf
+            $taskPath = Split-Path $task -Parent
+            if (Get-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue) {
+                Disable-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue | Out-Null
+                Write-FalkonLog -Level Success -Message "Disabled telemetry task: $taskName"
+            }
+        }
         
-        Write-FalkonLog -Level Success -Message "Telemetry Nuked."
+        Write-FalkonLog -Level Success -Message "Telemetry & Tasks Nuked."
     } catch {
         Write-FalkonLog -Level Error -Message "Failed to disable Telemetry" -Exception $_.Exception
     }
@@ -96,8 +112,13 @@ function Invoke-Debloat {
     Write-FalkonLog -Level Info -Message "Eradicating Bloatware ($Profile Profile)..."
     $commonBloat = @("*Microsoft.BingNews*", "*Microsoft.GetHelp*", "*Microsoft.Getstarted*", "*Microsoft.Microsoft3DViewer*", "*king.com.CandyCrush*")
     
-    if ($Profile -eq 'Performance') { $commonBloat += "*Microsoft.MicrosoftOfficeHub*" }
-    elseif ($Profile -eq 'Stability') { $commonBloat += "*Microsoft.XboxApp*"; $commonBloat += "*Microsoft.XboxGamingOverlay*" }
+    if ($Profile -eq 'Performance') {
+        $commonBloat += "*Microsoft.MicrosoftOfficeHub*"
+    }
+    elseif ($Profile -eq 'Stability') {
+        $commonBloat += "*Microsoft.XboxApp*"
+        $commonBloat += "*Microsoft.XboxGamingOverlay*"
+    }
 
     foreach ($app in $commonBloat) {
         try {
@@ -112,64 +133,89 @@ function Invoke-Debloat {
             Write-FalkonLog -Level Error -Message "Failed to remove $app" -Exception $_.Exception
         }
     }
-    Write-FalkonLog -Level Success -Message "Bloatware Eradicated."
     Start-Sleep -Seconds 1
 }
 
-function Invoke-ServicesTweaks {
+function Invoke-OptimizeServices {
     param([string]$Profile)
-    Write-FalkonLog -Level Info -Message "Optimizing Services ($Profile Profile)..."
+    Write-FalkonLog -Level Info -Message "Optimizing Windows Services ($Profile Profile)..."
+    
+    # Common services optimization
+    $services = @{
+        "SysMain" = "Automatic"  # Kept automatic for disk caching stability unless performance is requested
+        "XblAuthManager" = "Manual"
+        "XblGameSave" = "Manual"
+    }
 
-    try {
-        Stop-Service "SysMain" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-        Set-Service "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
-        
-        if ($Profile -eq 'Performance') {
-            Stop-Service "WSearch" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-            Set-Service "WSearch" -StartupType Disabled -ErrorAction SilentlyContinue
+    if ($Profile -eq 'Performance') {
+        $services["SysMain"] = "Disabled"
+        $services["MapsBroker"] = "Disabled"
+        $services["WbioSrvc"] = "Disabled"
+    }
+
+    foreach ($srv in $services.Keys) {
+        try {
+            if (Get-Service -Name $srv -ErrorAction SilentlyContinue) {
+                Set-Service -Name $srv -StartupType $services[$srv] -ErrorAction Stop
+                Write-FalkonLog -Level Success -Message "Set Service $srv to $($services[$srv])"
+            }
+        } catch {
+            Write-FalkonLog -Level Error -Message "Failed to update service $srv" -Exception $_.Exception
         }
-        Write-FalkonLog -Level Success -Message "Services Optimized."
-    } catch {
-        Write-FalkonLog -Level Error -Message "Failed to optimize Services" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
 
 if ($Menu) {
     while ($true) {
-        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "SYSTEM OPTIMIZER (TWEAKER)" } else { Clear-Host }
-        Write-Host "Select your Optimization Profile:" -ForegroundColor Yellow
-        Write-Host "--------------------------------------------------" -ForegroundColor Cyan
-        Write-Host "[1] Maximum Performance (Lowest latency, Removes built-in productivity apps)" -ForegroundColor Green
-        Write-Host "[2] Maximum Stability & Productivity (Safe tweaks, Keeps productivity apps)" -ForegroundColor Blue
-        Write-Host "[0] Back to Main Menu" -ForegroundColor White
-        Write-Host "==================================================" -ForegroundColor Cyan
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "PRIVACY & SERVICES OPTIMIZER"
+            Show-FalkonBox -Title "CHOOSE PROFILE" -Lines @(
+                "[1] Apply Privacy & Telemetry Nuke only",
+                "[2] Apply Performance Profile (Removes Cortana/News bloat)",
+                "[3] Apply Stability Profile (Preserves Xbox & System integrations)",
+                "[0] Back to Main Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
         
-        $choice = Read-Host "Profile Selection"
-        $profile = ''
-        switch ($choice) {
-            '1' { $profile = 'Performance' }
-            '2' { $profile = 'Stability' }
-            '0' { return }
-            default { continue }
+        $choice = Read-Host "  Profile Selection"
+        if ($choice -eq '0') { return }
+        
+        if ($choice -eq '1') {
+            if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING TELEMETRY NUKE" } else { Clear-Host }
+            if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
+                Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+            }
+            Invoke-TelemetryNuke
+            if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         }
-        
-        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING TWEAKS" } else { Clear-Host }
-        Write-Host "Applying $profile Tweaks. Please wait..." -ForegroundColor Cyan
-        
-        # Engage Safety Net Before Modifying
-        if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
-            Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+        elseif ($choice -eq '2') {
+            if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING PERFORMANCE PROFILE" } else { Clear-Host }
+            if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
+                Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+            }
+            Invoke-TelemetryNuke
+            Invoke-Debloat -Profile "Performance"
+            Invoke-OptimizeServices -Profile "Performance"
+            Invoke-UltimatePowerPlan
+            Invoke-WindowsUpdateControl
+            Invoke-TaskbarDebloat
+            if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         }
-        
-        Invoke-TelemetryNuke
-        Invoke-Debloat -Profile $profile
-        Invoke-ServicesTweaks -Profile $profile
-        Invoke-UltimatePowerPlan
-        Invoke-WindowsUpdateControl
-        Invoke-TaskbarDebloat
-        
-        if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
+        elseif ($choice -eq '3') {
+            if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING STABILITY PROFILE" } else { Clear-Host }
+            if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
+                Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+            }
+            Invoke-TelemetryNuke
+            Invoke-Debloat -Profile "Stability"
+            Invoke-OptimizeServices -Profile "Stability"
+            Invoke-UltimatePowerPlan
+            Invoke-WindowsUpdateControl
+            Invoke-TaskbarDebloat
+            if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
+        }
     }
 }
 elseif ($Apply) {
@@ -183,7 +229,7 @@ elseif ($Apply) {
     
     Invoke-TelemetryNuke; $appliedTweaks.Add('Telemetry Disable & Registry Wipe')
     Invoke-Debloat -Profile "Stability"; $appliedTweaks.Add('Stability-Safe App Debloat')
-    Invoke-ServicesTweaks -Profile "Stability"; $appliedTweaks.Add('Service Profile Optimization')
+    Invoke-OptimizeServices -Profile "Stability"; $appliedTweaks.Add('Service Profile Optimization')
     Invoke-UltimatePowerPlan; $appliedTweaks.Add('Ultimate Performance Power Plan')
     Invoke-WindowsUpdateControl; $appliedTweaks.Add('OEM Driver Override Block')
     Invoke-TaskbarDebloat; $appliedTweaks.Add('Taskbar Cleanup (Widgets, Chat, Copilot)')

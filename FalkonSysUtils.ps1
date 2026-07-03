@@ -138,6 +138,7 @@ if (Test-Path -LiteralPath $corePath) { Import-Module $corePath -ErrorAction Sil
 # Check if arguments are provided. If so, forward directly to System Cleaner CLI mode.
 $argsBound = $PSBoundParameters.Count -gt 0
 if ($argsBound -and -not $Menu) {
+    $global:UscNonInteractive = $true
     $cleanerPath = Join-Path $PSScriptRoot 'SystemCleaner\UltimateSystemCleaner.ps1'
     if (Test-Path -LiteralPath $cleanerPath) {
         $boundArgs = @{}
@@ -161,23 +162,31 @@ $cpuInfo = (Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Sele
 $ramInfo = [math]::Round((Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).TotalPhysicalMemory / 1GB, 1)
 
 while ($true) {
-    if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo } else { Clear-Host }
-    Write-Host " Privilege Context : $adminStatus" -ForegroundColor Yellow
-    Write-Host " OS System         : $osInfo" -ForegroundColor Gray
-    Write-Host " Processor         : $cpuInfo" -ForegroundColor Gray
-    Write-Host " Installed RAM     : $ramInfo GB" -ForegroundColor Gray
-    Write-Host '--------------------------------------------------' -ForegroundColor Cyan
-    Write-Host '[1] System Disk Space Cleaner' -ForegroundColor Green
-    Write-Host '[2] Windows Registry Optimizer' -ForegroundColor Magenta
-    Write-Host '[3] TCP/IP Network Connection Latency Optimizer' -ForegroundColor Blue
-    Write-Host '[4] Windows Privacy Telemetry & Services Tweaker' -ForegroundColor Yellow
-    Write-Host '[5] Software Silent Batch Package Installer' -ForegroundColor DarkCyan
-    Write-Host '[6] Apply Recommended Settings (One-Click Preset)' -ForegroundColor Red
-    Write-Host '[7] Diagnose System Space Only (No Deletions)' -ForegroundColor Green
-    Write-Host '[0] Exit' -ForegroundColor White
-    Write-Host '==================================================' -ForegroundColor Cyan
+    if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+        Show-FalkonLogo
+        Show-FalkonBox -Title "SYSTEM CONTEXT & INFORMATION" -Lines @(
+            "Privilege Context : $adminStatus",
+            "OS System         : $osInfo",
+            "Processor         : $cpuInfo",
+            "Installed RAM     : $ramInfo GB"
+        ) -Color "Gray"
+        Write-Host ""
+        Show-FalkonBox -Title "MAIN MENU OPTIONS" -Lines @(
+            "[1] System Disk Space Cleaner",
+            "[2] Windows Registry Optimizer",
+            "[3] TCP/IP Network Connection Latency Optimizer",
+            "[4] Windows Privacy Telemetry & Services Tweaker",
+            "[5] Software Silent Batch Package Installer",
+            "[6] Apply Recommended Settings (One-Click Preset)",
+            "[7] Diagnose System Space Only (No Deletions)",
+            "[0] Exit"
+        ) -Color "Cyan"
+        Write-Host ""
+    } else {
+        Clear-Host
+    }
     
-    $selection = Read-Host 'Selection'
+    $selection = Read-Host '  Selection'
     switch ($selection) {
         '1' {
             $cleanerPath = Join-Path $PSScriptRoot 'SystemCleaner\UltimateSystemCleaner.ps1'
@@ -205,16 +214,24 @@ while ($true) {
             else { Write-Host "Module missing: $appPath" -ForegroundColor Red; Start-Sleep -Seconds 2 }
         }
         '6' {
-            if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "PRESET VERIFICATION" } else { Clear-Host }
-            Write-Host "[!] WARNING: You are about to apply the Recommended Settings preset." -ForegroundColor Yellow
-            Write-Host "This preset combines two distinct risk-level operations:" -ForegroundColor Gray
-            Write-Host ""
-            Write-Host " 1. Disk Cleanup (SAFE) - Deletes temp folders, recycle bin items, logs." -ForegroundColor Green
-            Write-Host " 2. System Tweaks (INVASIVE) - Telemetry disable, network TCP tuning, registry optimizer." -ForegroundColor Red
-            Write-Host ""
-            $pConfirm = Read-Host "Are you sure you want to apply all recommended tweaks? (y/N)"
-            if ($pConfirm -notmatch '^[yY]') {
-                Write-Host "[*] Preset canceled." -ForegroundColor Yellow
+            if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+                Show-FalkonLogo -SubTitle "PRESET VERIFICATION"
+                Show-FalkonBox -Title "PRESET INSTRUCTIONS & RISK LEVEL" -Lines @(
+                    "You are about to apply the Recommended Settings preset.",
+                    "This preset combines two distinct risk-level operations:",
+                    "",
+                    "  1. Disk Cleanup (SAFE):",
+                    "     Deletes temp folders, recycle bin items, logs.",
+                    "",
+                    "  2. System Tweaks (INVASIVE):",
+                    "     Telemetry disable, network TCP tuning, registry optimizer."
+                ) -Color "Yellow"
+                Write-Host ""
+            } else { Clear-Host }
+            
+            $pConfirm = Show-FalkonConfirm -PromptMessage "Apply all recommended tweaks?"
+            if (-not $pConfirm) {
+                Write-Host "  [*] Preset canceled." -ForegroundColor Yellow
                 Start-Sleep -Seconds 1
                 continue
             }

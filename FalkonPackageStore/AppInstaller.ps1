@@ -9,46 +9,48 @@ if (Test-Path $corePath) { Import-Module $corePath -ErrorAction SilentlyContinue
 function Invoke-WingetInstall {
     param([string[]]$PackageIds, [string]$PackName)
     
-    Write-Host "[*] Installing $PackName... This may take a while." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Installing $PackName... This may take a while."
     foreach ($id in $PackageIds) {
-        Write-Host " -> Installing $id..." -ForegroundColor Cyan
+        Write-FalkonLog -Level Info -Message "Installing $id..."
         
         # Reset exit code before run
-        $global:LASTEXITCODE = 0
+        $LASTEXITCODE = 0
         winget install --id $id -e --accept-package-agreements --accept-source-agreements --silent | Out-Null
         
-        $code = $global:LASTEXITCODE
+        $code = $LASTEXITCODE
         if ($code -eq 0) {
-            Write-Host "    [+] Installed Successfully." -ForegroundColor Green
+            Write-FalkonLog -Level Success -Message "Installed $id Successfully."
         } elseif ($code -eq 2316632065 -or $code -eq -1978335231) {
-            Write-Host "    [!] Skipped: Already Installed." -ForegroundColor DarkYellow
+            Write-FalkonLog -Level Warning -Message "Skipped $id: Already Installed."
         } else {
-            Write-Host "    [-] Failed with exit code $code" -ForegroundColor Red
+            Write-FalkonLog -Level Error -Message "Failed to install $id with exit code $code"
         }
     }
-    Write-Host "[+] $PackName Process Complete." -ForegroundColor Green
+    Write-FalkonLog -Level Success -Message "$PackName Process Complete."
     Start-Sleep -Seconds 2
 }
 
 if ($Menu) {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "PACKAGE INSTALLER" } else { Clear-Host }
-        Write-Host "[!] Winget is not installed or available on this system." -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Winget is not installed or available on this system."
         if (Get-Command Invoke-FalkonPause -ErrorAction SilentlyContinue) { Invoke-FalkonPause }
         return
     }
 
     while ($true) {
-        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "PACKAGE INSTALLER" } else { Clear-Host }
-        Write-Host "Select Software Pack to Install silently:" -ForegroundColor Yellow
-        Write-Host "--------------------------------------------------" -ForegroundColor Cyan
-        Write-Host "[1] Essentials Pack (Brave, 7-Zip, VLC, Notepad++)" -ForegroundColor Green
-        Write-Host "[2] Creator/Dev Pack (VS Code, Git, Python, OBS Studio)" -ForegroundColor Magenta
-        Write-Host "[3] Gaming Pack (Steam, Discord, Epic Games Launcher)" -ForegroundColor Blue
-        Write-Host "[0] Back to Main Menu" -ForegroundColor White
-        Write-Host "==================================================" -ForegroundColor Cyan
+        if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) {
+            Show-FalkonLogo -SubTitle "PACKAGE INSTALLER"
+            Show-FalkonBox -Title "SILENT APP INSTALLER ACTIONS" -Lines @(
+                "[1] Essentials Pack (Brave, 7-Zip, VLC, Notepad++)",
+                "[2] Creator/Dev Pack (VS Code, Git, Python, OBS Studio)",
+                "[3] Gaming Pack (Steam, Discord, Epic Games Launcher)",
+                "[0] Back to Main Menu"
+            ) -Color "Cyan"
+            Write-Host ""
+        } else { Clear-Host }
         
-        $choice = Read-Host "Selection"
+        $choice = Read-Host "  Selection"
         if ($choice -eq '0') { return }
         
         if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "DOWNLOADING PACKAGES" } else { Clear-Host }
