@@ -130,7 +130,11 @@ function New-UscRestorePoint {
     $registryModified = $false
 
     if (Test-Path -LiteralPath $srRegistryPath) {
-        $originalVal = (Get-ItemProperty -Path $srRegistryPath -Name $registryValName -ErrorAction SilentlyContinue).$registryValName
+        try {
+            $originalVal = Get-ItemPropertyValue -Path $srRegistryPath -Name $registryValName -ErrorAction Stop
+        } catch {
+            # Property doesn't exist, which is fine
+        }
         try {
             Set-ItemProperty -Path $srRegistryPath -Name $registryValName -Value 0 -Type DWord -Force -ErrorAction Stop
             $registryModified = $true
