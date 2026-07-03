@@ -42,7 +42,7 @@ function Backup-FalkonRegistryKey {
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "[*] Registry backup generated: $backupFile" -ForegroundColor Gray
             } else {
-                Write-Warning "Failed to export registry path $regPath: $($output -join ' ')"
+                Write-Warning "Failed to export registry path ${regPath}: $($output -join ' ')"
             }
         }
     } catch {
