@@ -11,17 +11,18 @@ function Invoke-UscParallel {
 
     if ($InputObject.Count -eq 0) { return @() }
 
-    # Enable thread-safe session state sharing
-    $sessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-    
-    # We want to allow the runspaces to use environment variables and default hosts
-    $pool = [runspacefactory]::CreateRunspacePool(1, [Math]::Max(1, $ThrottleLimit), $sessionState, $Host)
-    $pool.ApartmentState = 'MTA'
-    $pool.Open()
-    
+    $pool = $null
     $jobs = [System.Collections.Generic.List[object]]::new()
 
     try {
+        # Enable thread-safe session state sharing
+        $sessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+        
+        # We want to allow the runspaces to use environment variables and default hosts
+        $pool = [runspacefactory]::CreateRunspacePool(1, [Math]::Max(1, $ThrottleLimit), $sessionState, $Host)
+        $pool.ApartmentState = 'MTA'
+        $pool.Open()
+
         foreach ($item in $InputObject) {
             $ps = [powershell]::Create()
             $ps.RunspacePool = $pool
@@ -33,6 +34,7 @@ function Invoke-UscParallel {
                 PowerShell = $ps
                 Handle     = $ps.BeginInvoke()
                 Item       = $item
+                Disposed   = $false
             })
         }
 
@@ -43,8 +45,8 @@ function Invoke-UscParallel {
                 
                 # Harvest child-runspace streams
                 if ($job.PowerShell.HadErrors) {
-                    $errors = $job.PowerShell.Streams.Error | ForEach-Object { $_.Exception.Message }
-                    Write-UscLog -Level Error -Message "Error in parallel runspace job for item '$($job.Item)'" -Data @{ Errors = $errors }
+                    $errors = $job.PowerShell.Streams.Error | ForEach-Object { if ($null -ne $_.Exception) { $_.Exception.Message } else { $_.ToString() } }
+                    Write-UscLog -Level Warning -Message "Non-terminating errors occurred in parallel runspace job for item '$($job.Item)'" -Data @{ Errors = $errors }
                 }
                 
                 # Forward warning and verbose messages from runspace if they exist
@@ -66,13 +68,23 @@ function Invoke-UscParallel {
             }
             finally {
                 $job.PowerShell.Dispose()
+                $job.Disposed = $true
             }
         }
         return @($results)
     }
     finally {
-        $pool.Close()
-        $pool.Dispose()
+        if ($null -ne $jobs) {
+            foreach ($job in $jobs) {
+                if ($null -ne $job.PowerShell -and -not $job.Disposed) {
+                    try { $job.PowerShell.Dispose() } catch {}
+                }
+            }
+        }
+        if ($null -ne $pool) {
+            try { $pool.Close() } catch {}
+            try { $pool.Dispose() } catch {}
+        }
     }
 }
 

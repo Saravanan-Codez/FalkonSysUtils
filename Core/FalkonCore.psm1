@@ -22,6 +22,66 @@ function Invoke-FalkonPause {
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
+$script:FalkonLogFile = $null
+
+function Initialize-FalkonLogger {
+    $logDir = Join-Path $env:ProgramData "FalkonSysUtils\Logs"
+    try {
+        if (-not (Test-Path $logDir)) {
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        }
+        $script:FalkonLogFile = Join-Path $logDir "FalkonSysUtils.log"
+    } catch {
+        # Fallback to console only if directory creation fails
+    }
+}
+
+function Write-FalkonLog {
+    param(
+        [ValidateSet('Info', 'Warning', 'Error', 'Success')][string]$Level = 'Info',
+        [string]$Message,
+        [System.Exception]$Exception
+    )
+    
+    if ($null -eq $script:FalkonLogFile) {
+        Initialize-FalkonLogger
+    }
+    
+    $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    $errText = if ($Exception) { " | Error: $($Exception.Message)" } else { "" }
+    $logLine = "[$timestamp] [$Level] $Message$errText"
+    
+    if ($script:FalkonLogFile) {
+        try {
+            Add-Content -LiteralPath $script:FalkonLogFile -Value $logLine -Encoding UTF8 -ErrorAction SilentlyContinue
+        } catch {}
+    }
+    
+    # Render colors for user-facing TUI output
+    $color = switch ($Level) {
+        'Success' { 'Green' }
+        'Warning' { 'Yellow' }
+        'Error'   { 'Red' }
+        default   { 'Gray' }
+    }
+    
+    $prefix = switch ($Level) {
+        'Success' { '[+]' }
+        'Warning' { '[!]' }
+        'Error'   { '[-]' }
+        default   { '[*]' }
+    }
+    
+    Write-Host "  $prefix $Message" -ForegroundColor $color
+    
+    # Populate standard warning / verbose streams
+    switch ($Level) {
+        'Warning' { Write-Warning $Message }
+        'Error'   { Write-Warning "[ERROR] $Message" }
+        default   { Write-Verbose $Message }
+    }
+}
+
 function Backup-FalkonRegistryKey {
     param(
         [string]$Path
@@ -30,8 +90,25 @@ function Backup-FalkonRegistryKey {
     try {
         if (-not (Test-Path $backupDir)) { New-Item -ItemType Directory -Path $backupDir -Force | Out-Null }
         
+        # Strip registry provider prefix if present
+        $cleanPath = $Path
+        if ($cleanPath -match '::(.*)$') {
+            $cleanPath = $Matches[1]
+        }
+        
         # Format PS path (e.g. HKCU:\...) to reg.exe path (e.g. HKCU\...)
-        $regPath = ($Path -replace '^HKLM:\\', 'HKLM\' -replace '^HKCU:\\', 'HKCU\' -replace '^HKLM:', 'HKLM' -replace '^HKCU:', 'HKCU') -replace '/', '\'
+        $regPath = $cleanPath
+        $regPath = $regPath -replace '^HKEY_LOCAL_MACHINE\\?', 'HKLM\'
+        $regPath = $regPath -replace '^HKEY_CURRENT_USER\\?', 'HKCU\'
+        $regPath = $regPath -replace '^HKLM:\\?', 'HKLM\'
+        $regPath = $regPath -replace '^HKCU:\\?', 'HKCU\'
+        $regPath = $regPath -replace '^HKLM:\?', 'HKLM\'
+        $regPath = $regPath -replace '^HKCU:\?', 'HKCU\'
+        
+        # Normalize slashes
+        $regPath = $regPath -replace '/', '\'
+        $regPath = $regPath -replace '\\+', '\'
+        $regPath = $regPath.TrimEnd('\')
         
         $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
         $safeName = ($regPath -replace '[\\:*?"<>|]', '_')
@@ -40,14 +117,14 @@ function Backup-FalkonRegistryKey {
         if (Test-Path -LiteralPath $Path) {
             $output = & reg.exe export $regPath $backupFile /y 2>&1
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "[*] Registry backup generated: $backupFile" -ForegroundColor Gray
+                Write-FalkonLog -Level Info -Message "Registry backup generated: $backupFile"
             } else {
-                Write-Warning "Failed to export registry path ${regPath}: $($output -join ' ')"
+                Write-FalkonLog -Level Warning -Message "Failed to export registry path ${regPath}: $($output -join ' ')"
             }
         }
     } catch {
-        Write-Warning "Error during registry backup: $($_.Exception.Message)"
+        Write-FalkonLog -Level Warning -Message "Error during registry backup: $($_.Exception.Message)"
     }
 }
 
-Export-ModuleMember -Function Show-FalkonLogo, Invoke-FalkonPause, Backup-FalkonRegistryKey
+Export-ModuleMember -Function Show-FalkonLogo, Invoke-FalkonPause, Initialize-FalkonLogger, Write-FalkonLog, Backup-FalkonRegistryKey

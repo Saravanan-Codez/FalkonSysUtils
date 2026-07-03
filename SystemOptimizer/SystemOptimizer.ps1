@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$Menu,
-    [switch]$Apply
+    [switch]$Apply,
+    [switch]$BypassSafetyNet
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,7 +15,7 @@ $corePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Core\FalkonCore.psm1"
 if (Test-Path $corePath) { Import-Module $corePath -ErrorAction SilentlyContinue }
 
 function Invoke-UltimatePowerPlan {
-    Write-Host "[*] Unlocking Ultimate Performance Power Plan..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Unlocking Ultimate Performance Power Plan..."
 
     try {
         # Inject the Ultimate Performance GUID
@@ -27,33 +28,33 @@ function Invoke-UltimatePowerPlan {
         if ($allPlans -match $planGuid) {
             $out2 = & powercfg.exe -setactive $planGuid 2>&1
             if ($LASTEXITCODE -ne 0) { throw "powercfg -setactive failed: $out2" }
-            Write-Host "[+] Ultimate Performance Plan unlocked and activated." -ForegroundColor Green
+            Write-FalkonLog -Level Success -Message "Ultimate Performance Plan unlocked and activated."
         } else {
-            Write-Host "[-] Failed to activate Ultimate Performance." -ForegroundColor DarkYellow
+            Write-FalkonLog -Level Warning -Message "Failed to activate Ultimate Performance."
         }
     } catch {
-        Write-Host "[-] Error configuring power plan: $($_.Exception.Message)" -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Error configuring power plan" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
 
 function Invoke-WindowsUpdateControl {
-    Write-Host "[*] Blocking Forced Windows Update Driver Installations..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Blocking Forced Windows Update Driver Installations..."
     $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
 
     try {
         if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
         if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force -ErrorAction Stop | Out-Null }
         Set-ItemProperty -Path $regPath -Name "ExcludeWUDriversInQualityUpdate" -Value 1 -Type DWord -ErrorAction Stop
-        Write-Host "[+] OEM Driver Overrides Prevented." -ForegroundColor Green
+        Write-FalkonLog -Level Success -Message "OEM Driver Overrides Prevented."
     } catch {
-        Write-Host "[-] Failed to block Driver Updates: $($_.Exception.Message)" -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Failed to block Driver Updates" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
 
 function Invoke-TaskbarDebloat {
-    Write-Host "[*] Unpinning Chat, Widgets, and Copilot from Taskbar..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Unpinning Chat, Widgets, and Copilot from Taskbar..."
     $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
 
     try {
@@ -61,15 +62,15 @@ function Invoke-TaskbarDebloat {
         Set-ItemProperty -Path $regPath -Name "TaskbarMn" -Value 0 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path $regPath -Name "TaskbarDa" -Value 0 -Type DWord -ErrorAction Stop
         Set-ItemProperty -Path $regPath -Name "ShowCopilotButton" -Value 0 -Type DWord -ErrorAction Stop
-        Write-Host "[+] UI Bloat Disabled." -ForegroundColor Green
+        Write-FalkonLog -Level Success -Message "UI Bloat Disabled."
     } catch {
-        Write-Host "[-] Failed to unpin Taskbar bloat: $($_.Exception.Message)" -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Failed to unpin Taskbar bloat" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
 
 function Invoke-TelemetryNuke {
-    Write-Host "[*] Nuking Telemetry & Data Collection..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Nuking Telemetry & Data Collection..."
     $regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
 
     try {
@@ -83,16 +84,16 @@ function Invoke-TelemetryNuke {
         Stop-Service "dmwappushservice" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
         Set-Service "dmwappushservice" -StartupType Disabled -ErrorAction SilentlyContinue
         
-        Write-Host "[+] Telemetry Nuked." -ForegroundColor Green
+        Write-FalkonLog -Level Success -Message "Telemetry Nuked."
     } catch {
-        Write-Host "[-] Failed to disable Telemetry: $($_.Exception.Message)" -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Failed to disable Telemetry" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
 
 function Invoke-Debloat {
     param([string]$Profile)
-    Write-Host "[*] Eradicating Bloatware ($Profile Profile)..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Eradicating Bloatware ($Profile Profile)..."
     $commonBloat = @("*Microsoft.BingNews*", "*Microsoft.GetHelp*", "*Microsoft.Getstarted*", "*Microsoft.Microsoft3DViewer*", "*king.com.CandyCrush*")
     
     if ($Profile -eq 'Performance') { $commonBloat += "*Microsoft.MicrosoftOfficeHub*" }
@@ -103,21 +104,21 @@ function Invoke-Debloat {
             $pkg = Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue
             if ($pkg) {
                 $pkg | Remove-AppxPackage -AllUsers -ErrorAction Stop
-                Write-Host "    [+] Removed $app" -ForegroundColor Green
+                Write-FalkonLog -Level Success -Message "Removed $app"
             } else {
-                Write-Host "    [!] Skipped $app (Not Found)" -ForegroundColor DarkYellow
+                Write-FalkonLog -Level Info -Message "Skipped $app (Not Found)"
             }
         } catch {
-            Write-Host "    [-] Failed to remove $app : $($_.Exception.Message)" -ForegroundColor Red
+            Write-FalkonLog -Level Error -Message "Failed to remove $app" -Exception $_.Exception
         }
     }
-    Write-Host "[+] Bloatware Eradicated." -ForegroundColor Green
+    Write-FalkonLog -Level Success -Message "Bloatware Eradicated."
     Start-Sleep -Seconds 1
 }
 
 function Invoke-ServicesTweaks {
     param([string]$Profile)
-    Write-Host "[*] Optimizing Services ($Profile Profile)..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Optimizing Services ($Profile Profile)..."
 
     try {
         Stop-Service "SysMain" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
@@ -127,9 +128,9 @@ function Invoke-ServicesTweaks {
             Stop-Service "WSearch" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
             Set-Service "WSearch" -StartupType Disabled -ErrorAction SilentlyContinue
         }
-        Write-Host "[+] Services Optimized." -ForegroundColor Green
+        Write-FalkonLog -Level Success -Message "Services Optimized."
     } catch {
-        Write-Host "[-] Failed to optimize Services: $($_.Exception.Message)" -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Failed to optimize Services" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
@@ -157,7 +158,9 @@ if ($Menu) {
         Write-Host "Applying $profile Tweaks. Please wait..." -ForegroundColor Cyan
         
         # Engage Safety Net Before Modifying
-        if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+        if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
+            Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+        }
         
         Invoke-TelemetryNuke
         Invoke-Debloat -Profile $profile
@@ -174,7 +177,9 @@ elseif ($Apply) {
     $appliedTweaks = [System.Collections.Generic.List[string]]::new()
 
     # Engage Safety Net Before Modifying
-    if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+    if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
+        Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+    }
     
     Invoke-TelemetryNuke; $appliedTweaks.Add('Telemetry Disable & Registry Wipe')
     Invoke-Debloat -Profile "Stability"; $appliedTweaks.Add('Stability-Safe App Debloat')

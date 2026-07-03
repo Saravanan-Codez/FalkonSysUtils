@@ -14,12 +14,14 @@ param(
     [switch]$Aggressive,
     [switch]$Nuclear,
     [switch]$Analyze,
+    [switch]$Diagnose,
     [switch]$ComponentStore,
     [switch]$InstallScheduledTask,
     [switch]$RemoveScheduledTask,
     [switch]$Menu,
     [switch]$GenerateReport,
     [switch]$ConfirmNuclear,
+    [switch]$BypassSafetyNet,
     [string]$ConfigPath
 )
 
@@ -29,11 +31,24 @@ if ([string]::IsNullOrEmpty($PSScriptRoot)) {
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host '       FALKON SYSTEM UTILITIES WEB BOOTSTRAP       ' -ForegroundColor White -BackgroundColor Blue
     Write-Host '==================================================' -ForegroundColor Cyan
-    Write-Host 'Running in web-load context. Bootstrapping files...' -ForegroundColor Gray
     
     $zipUrl = 'https://github.com/Saravanan-Codez/FalkonSysUtils/archive/refs/heads/main.zip'
     $tempDir = Join-Path $env:TEMP 'FalkonSysUtils-Bootstrap'
     
+    Write-Host "Source: $zipUrl" -ForegroundColor Gray
+    Write-Host ""
+    
+    if ([Environment]::UserInteractive) {
+        $confirm = Read-Host "Proceed with downloading and executing the suite? (y/N)"
+        if ($confirm -notmatch '^[yY]') {
+            Write-Host "Bootstrap aborted by user." -ForegroundColor Yellow
+            return
+        }
+    } else {
+        Write-Warning "FalkonSysUtils: Proceeding with web bootstrap in non-interactive session."
+    }
+    
+    Write-Host 'Running in web-load context. Bootstrapping files...' -ForegroundColor Gray
     try {
         if (Test-Path -LiteralPath $tempDir) {
             Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
@@ -72,8 +87,40 @@ if ([string]::IsNullOrEmpty($PSScriptRoot)) {
     return
 }
 
-# Unblock downloaded script files to support manual ZIP downloads (excluding community Plugins)
-Get-ChildItem -LiteralPath $PSScriptRoot -Include *.ps1,*.psm1 -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike "*\Plugins\*" } | Unblock-File -ErrorAction SilentlyContinue
+# Scan for blocked script files (excluding community Plugins)
+$blockedFiles = @(Get-ChildItem -LiteralPath $PSScriptRoot -Include *.ps1,*.psm1 -Recurse -ErrorAction SilentlyContinue | Where-Object {
+    ($_.FullName -notlike "*\Plugins\*") -and (Get-Item -LiteralPath $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue)
+})
+
+if ($blockedFiles.Count -gt 0) {
+    $shouldUnblock = $false
+    if ([Environment]::UserInteractive) {
+        Write-Host "==================================================" -ForegroundColor Yellow
+        Write-Host " SECURITY NOTICE: BLOCKED SCRIPTS DETECTED" -ForegroundColor White -BackgroundColor DarkRed
+        Write-Host "==================================================" -ForegroundColor Yellow
+        Write-Host "PowerShell detected that the following suite script files were downloaded" -ForegroundColor Gray
+        Write-Host "from the Internet and are blocked by Windows Security:" -ForegroundColor Gray
+        foreach ($file in $blockedFiles) {
+            Write-Host "  - $($file.Name)" -ForegroundColor Yellow
+        }
+        Write-Host ""
+        Write-Host "Unblocking these files is required for the utility to run." -ForegroundColor Gray
+        $response = Read-Host "Do you want to unblock these files now? (y/N)"
+        if ($response -match '^[yY]') {
+            $shouldUnblock = $true
+        }
+    } else {
+        # Non-interactive mode: we must log a warning and unblock to ensure execution succeeds
+        Write-Warning "FalkonSysUtils: Automatically unblocking $($blockedFiles.Count) files in non-interactive session."
+        $shouldUnblock = $true
+    }
+
+    if ($shouldUnblock) {
+        $blockedFiles | Unblock-File -ErrorAction SilentlyContinue
+    } else {
+        Write-Warning "Files were not unblocked. The application may fail to run due to execution policies."
+    }
+}
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -178,27 +225,29 @@ while ($true) {
             $safetyPath = Join-Path $PSScriptRoot "Safety\SystemRestore.psm1"
             if (Test-Path $safetyPath) {
                 Import-Module $safetyPath -ErrorAction SilentlyContinue
-                if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+                if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
+                    Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+                }
             }
 
             # 2. Disk Space Cleanup (Safe Mode)
             $cleanerPath = Join-Path $PSScriptRoot 'SystemCleaner\UltimateSystemCleaner.ps1'
             if (Test-Path $cleanerPath) {
                 Write-Host "[*] Executing Safe Disk Cleanup..." -ForegroundColor Yellow
-                & $cleanerPath -Safe -GenerateReport
+                & $cleanerPath -Safe -GenerateReport -BypassSafetyNet:$BypassSafetyNet
             }
 
             # 3. Registry Optimizer
             $regPath = Join-Path $PSScriptRoot 'RegistryOptimizer\RegistryOptimizer.ps1'
-            if (Test-Path $regPath) { & $regPath -Apply }
+            if (Test-Path $regPath) { & $regPath -Apply -BypassSafetyNet:$BypassSafetyNet }
 
             # 4. Network Optimizer
             $netPath = Join-Path $PSScriptRoot 'NetworkOptimizer\NetworkOptimizer.ps1'
-            if (Test-Path $netPath) { & $netPath -Apply }
+            if (Test-Path $netPath) { & $netPath -Apply -BypassSafetyNet:$BypassSafetyNet }
 
             # 5. System Optimizer
             $optPath = Join-Path $PSScriptRoot 'SystemOptimizer\SystemOptimizer.ps1'
-            if (Test-Path $optPath) { & $optPath -Apply }
+            if (Test-Path $optPath) { & $optPath -Apply -BypassSafetyNet:$BypassSafetyNet }
 
             $reportDir = Join-Path $env:ProgramData 'UltimateSystemCleaner\Reports'
             $lastReport = Get-ChildItem -Path $reportDir -Filter "*.html" -ErrorAction SilentlyContinue |

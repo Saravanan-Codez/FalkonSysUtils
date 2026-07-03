@@ -24,63 +24,51 @@ param(
     [Parameter(ParameterSetName = 'Menu')][switch]$Menu,
     [switch]$GenerateReport,
     [switch]$ConfirmNuclear,
+    [switch]$BypassSafetyNet,
     [string]$ConfigPath
 )
 
 # --- Web Bootstrap Handler ---
 if ([string]::IsNullOrEmpty($PSScriptRoot)) {
-    $null = Set-ExecutionPolicy Bypass -Scope Process -Force -ErrorAction SilentlyContinue
-    Write-Host '==================================================' -ForegroundColor Cyan
-    Write-Host '       FALKON SYSTEM CLEANER WEB BOOTSTRAP         ' -ForegroundColor White -BackgroundColor Blue
-    Write-Host '==================================================' -ForegroundColor Cyan
-    Write-Host 'Running in web-load context. Bootstrapping files...' -ForegroundColor Gray
-    
-    $zipUrl = 'https://github.com/Saravanan-Codez/FalkonSysUtils/archive/refs/heads/main.zip'
-    $tempDir = Join-Path $env:TEMP 'FalkonSysUtils-Bootstrap'
-    
-    try {
-        if (Test-Path -LiteralPath $tempDir) {
-            Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
-        }
-        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-        
-        $zipFile = Join-Path $tempDir 'repo.zip'
-        Write-Host 'Downloading repository package from GitHub...' -ForegroundColor Gray
-        
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-RestMethod -Uri $zipUrl -OutFile $zipFile -ErrorAction Stop
-        
-        Write-Host 'Extracting files to temp workspace...' -ForegroundColor Gray
-        Expand-Archive -Path $zipFile -DestinationPath $tempDir -Force -ErrorAction Stop
-        
-        $expandedFolder = Get-ChildItem -LiteralPath $tempDir -Directory | Select-Object -First 1
-        if ($expandedFolder) {
-            $launcherPath = Join-Path $expandedFolder.FullName 'SystemCleaner\UltimateSystemCleaner.ps1'
-            Write-Host 'Running launcher in localized workspace...' -ForegroundColor Green
-            Start-Sleep -Seconds 1
-            
-            $boundArgs = @{}
-            foreach ($key in $PSBoundParameters.Keys) {
-                $boundArgs[$key] = $PSBoundParameters[$key]
-            }
-            if ($boundArgs.Count -eq 0) {
-                $boundArgs['Menu'] = $true
-            }
-            & $launcherPath @boundArgs
-        }
-        else {
-            Write-Error 'Failed to locate extracted launcher files in temp directory.'
-        }
-    }
-    catch {
-        $errorMessage = $_.Exception.Message
-        Write-Error "Web bootstrap failed: $errorMessage"
-    }
+    Write-Error "Web bootstrapping must be run via the main FalkonSysUtils.ps1 script. Please run:"
+    Write-Error "iex (Invoke-RestMethod 'https://raw.githubusercontent.com/Saravanan-Codez/FalkonSysUtils/main/FalkonSysUtils.ps1')"
     return
 }
 
-# Unblock downloaded script files to support manual ZIP downloads
-Get-ChildItem -LiteralPath $PSScriptRoot -Include *.ps1,*.psm1 -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
+# Scan for blocked script files
+$blockedFiles = @(Get-ChildItem -LiteralPath $PSScriptRoot -Include *.ps1,*.psm1 -Recurse -ErrorAction SilentlyContinue | Where-Object {
+    Get-Item -LiteralPath $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue
+})
+
+if ($blockedFiles.Count -gt 0) {
+    $shouldUnblock = $false
+    if ([Environment]::UserInteractive) {
+        Write-Host "==================================================" -ForegroundColor Yellow
+        Write-Host " SECURITY NOTICE: BLOCKED SCRIPTS DETECTED" -ForegroundColor White -BackgroundColor DarkRed
+        Write-Host "==================================================" -ForegroundColor Yellow
+        Write-Host "PowerShell detected that the following suite script files were downloaded" -ForegroundColor Gray
+        Write-Host "from the Internet and are blocked by Windows Security:" -ForegroundColor Gray
+        foreach ($file in $blockedFiles) {
+            Write-Host "  - $($file.Name)" -ForegroundColor Yellow
+        }
+        Write-Host ""
+        Write-Host "Unblocking these files is required for the utility to run." -ForegroundColor Gray
+        $response = Read-Host "Do you want to unblock these files now? (y/N)"
+        if ($response -match '^[yY]') {
+            $shouldUnblock = $true
+        }
+    } else {
+        # Non-interactive mode: we must log a warning and unblock to ensure execution succeeds
+        Write-Warning "UltimateSystemCleaner: Automatically unblocking $($blockedFiles.Count) files in non-interactive session."
+        $shouldUnblock = $true
+    }
+
+    if ($shouldUnblock) {
+        $blockedFiles | Unblock-File -ErrorAction SilentlyContinue
+    } else {
+        Write-Warning "Files were not unblocked. The application may fail to run due to execution policies."
+    }
+}
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -120,6 +108,11 @@ function New-UscRestorePoint {
     [CmdletBinding()]
     param([string]$Description = 'Ultimate System Cleaner checkpoint')
 
+    if ($global:FalkonRestorePointCreated) {
+        Write-UscLog -Level Info -Message "Session Restore Point already created. Skipping duplicate checkpoint."
+        return New-UscOperationResult -Name 'Restore Point' -Category Checkpoint -Status Succeeded -Message 'Restore point already created in this session'
+    }
+
     if (-not (Test-UscAdministrator)) {
         return New-UscOperationResult -Name 'Restore Point' -Category Checkpoint -Status Skipped -Message 'Administrator rights are required'
     }
@@ -145,6 +138,7 @@ function New-UscRestorePoint {
 
     try {
         Checkpoint-Computer -Description $Description -RestorePointType 'MODIFY_SETTINGS'
+        $global:FalkonRestorePointCreated = $true
         return New-UscOperationResult -Name 'Restore Point' -Category Checkpoint -Status Succeeded -Message $Description
     }
     catch {
@@ -357,7 +351,8 @@ function Show-UscResultsSummary {
         [Parameter(Mandatory)][psobject]$Run,
         [Parameter(Mandatory)][string]$RunId,
         [Parameter(Mandatory)][string]$LogFile,
-        [string[]]$ReportPaths = @()
+        [string[]]$ReportPaths = @(),
+        [switch]$NoPrompt
     )
 
     $duration = if ($Run.Started -and $Run.Finished) {
@@ -417,7 +412,7 @@ function Show-UscResultsSummary {
     foreach ($report in @($ReportPaths)) {
         Write-Host "  - $report" -ForegroundColor Yellow
     }
-    if ($htmlReport -and (Test-Path -LiteralPath $htmlReport) -and [Environment]::UserInteractive) {
+    if (-not $NoPrompt -and $htmlReport -and (Test-Path -LiteralPath $htmlReport) -and [Environment]::UserInteractive) {
         $open = Read-Host 'Open HTML report in browser? (y/N)'
         if ($open -match '^[yY]') {
             Start-Process -FilePath $htmlReport
@@ -949,7 +944,8 @@ else {
     if ($Safe) { $mode = 'Safe' }
     elseif ($Aggressive) { $mode = 'Aggressive' }
     elseif ($Nuclear) { $mode = 'Nuclear' }
-    elseif ($Analyze) { $mode = 'Diagnose' }
+    elseif ($Analyze) { $mode = 'Analyze' }
+    elseif ($Diagnose) { $mode = 'Diagnose' }
     elseif ($ComponentStore) { $mode = 'ComponentStore' }
     elseif ($InstallScheduledTask) { $mode = 'InstallScheduledTask' }
     elseif ($RemoveScheduledTask) { $mode = 'RemoveScheduledTask' }
@@ -1010,7 +1006,7 @@ else {
     $run = New-UscRunRecord -RunId $runId -Mode $mode -Results @($results) -Config $config
     $reportPaths = [System.Collections.Generic.List[string]]::new()
 
-    if ($GenerateReport -or $mode -in 'Diagnose','Analyze','Safe','Aggressive','Nuclear') {
+    if ($GenerateReport -or $mode -in 'Diagnose','Analyze','DeepSpace','ComponentStore','Safe','Aggressive','Nuclear','InstallScheduledTask','RemoveScheduledTask') {
         $reportPaths.Add((New-UscJsonReport -Run $run -OutputDirectory $config.ReportDirectory))
         $reportPaths.Add((New-UscCsvReport -Results @($results) -OutputDirectory $config.ReportDirectory -RunId $runId))
         $reportPaths.Add((New-UscHtmlReport -Run $run -OutputDirectory $config.ReportDirectory))
@@ -1018,7 +1014,7 @@ else {
 
     Write-UscLog -Level Audit -Message 'Run finished' -Data @{ Mode = $mode; TotalBytesFreed = $run.TotalBytesFreed; Reports = @($reportPaths); LogFile = $logFile }
 
-    Show-UscResultsSummary -Run $run -RunId $runId -LogFile $logFile -ReportPaths @($reportPaths)
+    Show-UscResultsSummary -Run $run -RunId $runId -LogFile $logFile -ReportPaths @($reportPaths) -NoPrompt
 
     [pscustomobject]@{
         RunId = $runId

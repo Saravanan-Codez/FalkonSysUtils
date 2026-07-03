@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$Menu,
-    [switch]$Apply
+    [switch]$Apply,
+    [switch]$BypassSafetyNet
 )
 
 $corePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Core\FalkonCore.psm1"
@@ -11,7 +12,7 @@ $safetyPath = Join-Path (Split-Path $PSScriptRoot -Parent) "Safety\SystemRestore
 if (Test-Path $safetyPath) { Import-Module $safetyPath -ErrorAction SilentlyContinue }
 
 function Invoke-TcpOptimization {
-    Write-Host "[*] Applying TCP/IP Optimization (Nagle's Algorithm & TCPNoDelay)..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Applying TCP/IP Optimization (Nagle's Algorithm & TCPNoDelay)..."
     
     try {
         # TCP NoDelay and TcpAckFrequency (Nagle's Algorithm disable for gaming)
@@ -33,15 +34,15 @@ function Invoke-TcpOptimization {
         $out3 = netsh int tcp set heuristics disabled 2>&1
         if ($LASTEXITCODE -ne 0) { throw "netsh heuristics failed: $out3" }
         
-        Write-Host "[+] TCP/IP Stack Optimized." -ForegroundColor Green
+        Write-FalkonLog -Level Success -Message "TCP/IP Stack Optimized."
     } catch {
-        Write-Host "[-] Failed to optimize TCP Stack: $($_.Exception.Message)" -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Failed to optimize TCP Stack" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
 
 function Invoke-DnsFlush {
-    Write-Host "[*] Flushing DNS Cache and Resetting Winsock..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Flushing DNS Cache and Resetting Winsock..."
     
     try {
         $out1 = ipconfig /flushdns 2>&1
@@ -50,24 +51,24 @@ function Invoke-DnsFlush {
         $out2 = netsh winsock reset 2>&1
         if ($LASTEXITCODE -ne 0) { throw "netsh winsock reset failed: $out2" }
         
-        Write-Host "[+] DNS Flushed & Winsock Reset." -ForegroundColor Green
+        Write-FalkonLog -Level Success -Message "DNS Flushed & Winsock Reset."
     } catch {
-        Write-Host "[-] Failed to flush DNS / reset Winsock: $($_.Exception.Message)" -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Failed to flush DNS / reset Winsock" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
 
 function Invoke-DisableDeliveryOptimization {
-    Write-Host "[*] Disabling P2P Windows Update Delivery Optimization..." -ForegroundColor Yellow
+    Write-FalkonLog -Level Info -Message "Disabling P2P Windows Update Delivery Optimization..."
     $path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config"
     
     try {
         if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $path }
         if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
         Set-ItemProperty -Path $path -Name "DODownloadMode" -Value 0 -Type DWord -ErrorAction Stop
-        Write-Host "[+] Bandwidth Hogging Disabled." -ForegroundColor Green
+        Write-FalkonLog -Level Success -Message "Bandwidth Hogging Disabled."
     } catch {
-        Write-Host "[-] Failed to disable Delivery Optimization: $($_.Exception.Message)" -ForegroundColor Red
+        Write-FalkonLog -Level Error -Message "Failed to disable Delivery Optimization" -Exception $_.Exception
     }
     Start-Sleep -Seconds 1
 }
@@ -85,7 +86,9 @@ if ($Menu) {
         if ($choice -eq '0') { return }
         if ($choice -eq '1') {
             if (Get-Command Show-FalkonLogo -ErrorAction SilentlyContinue) { Show-FalkonLogo -SubTitle "APPLYING TWEAKS" } else { Clear-Host }
-            if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+            if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
+                Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+            }
             Invoke-TcpOptimization
             Invoke-DnsFlush
             Invoke-DisableDeliveryOptimization
@@ -98,7 +101,9 @@ elseif ($Apply) {
     $applyStart = Get-Date
     $appliedTweaks = [System.Collections.Generic.List[string]]::new()
 
-    if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) { Invoke-FalkonSafetyNet }
+    if (Get-Command Invoke-FalkonSafetyNet -ErrorAction SilentlyContinue) {
+        Invoke-FalkonSafetyNet -BypassSafetyNet:$BypassSafetyNet
+    }
     Invoke-TcpOptimization; $appliedTweaks.Add('TCP/IP Tuning (CTCP, Window Scaling, Nagle Disable)')
     Invoke-DnsFlush; $appliedTweaks.Add('DNS Cache Flush')
     Invoke-DisableDeliveryOptimization; $appliedTweaks.Add('Delivery Optimization (Bandwidth Hog) Disabled')
