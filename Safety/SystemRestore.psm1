@@ -6,6 +6,22 @@ function Invoke-FalkonSafetyNet {
     Enable-ComputerRestore -Drive $osDrive -ErrorAction SilentlyContinue | Out-Null
     
     Write-Host "[*] Generating Falkon Pre-Optimization Snapshot..." -ForegroundColor Yellow
+
+    $srRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore"
+    $registryValName = "SystemRestorePointCreationFrequency"
+    $originalVal = $null
+    $registryModified = $false
+
+    if (Test-Path -LiteralPath $srRegistryPath) {
+        $originalVal = (Get-ItemProperty -Path $srRegistryPath -Name $registryValName -ErrorAction SilentlyContinue).$registryValName
+        try {
+            Set-ItemProperty -Path $srRegistryPath -Name $registryValName -Value 0 -Type DWord -Force -ErrorAction Stop
+            $registryModified = $true
+        } catch {
+            Write-Warning "Failed to temporarily adjust System Restore rate limit registry key."
+        }
+    }
+
     try {
         Checkpoint-Computer -Description "Falkon Pre-Optimization Snapshot" -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
         Write-Host "[+] System Restore Point Created Successfully." -ForegroundColor Green
@@ -19,6 +35,17 @@ function Invoke-FalkonSafetyNet {
             }
         } else {
             Write-Warning "Non-interactive context. Proceeding without restore point rollback capability."
+        }
+    }
+    finally {
+        if ($registryModified) {
+            try {
+                if ($null -eq $originalVal) {
+                    Remove-ItemProperty -Path $srRegistryPath -Name $registryValName -Force -ErrorAction SilentlyContinue
+                } else {
+                    Set-ItemProperty -Path $srRegistryPath -Name $registryValName -Value $originalVal -Type DWord -Force -ErrorAction Stop
+                }
+            } catch {}
         }
     }
 }

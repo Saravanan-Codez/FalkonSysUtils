@@ -95,14 +95,6 @@ function Get-UscSpinner {
     return $frame
 }
 
-$script:FalkonFrameIndex = 0
-$script:FalkonFrames = @(
-    ' \_("v")_/ ',
-    ' -_("o")_- ',
-    ' /_("v")_\ ',
-    ' -_("o")_- '
-)
-
 function Update-UscConsoleProgress {
     param(
         [string]$Activity,
@@ -111,8 +103,7 @@ function Update-UscConsoleProgress {
     )
     if (-not [Environment]::UserInteractive) { return }
 
-    $frame = $script:FalkonFrames[$script:FalkonFrameIndex]
-    $script:FalkonFrameIndex = ($script:FalkonFrameIndex + 1) % $script:FalkonFrames.Count
+    $spinner = Get-UscSpinner
     
     $progressBarWidth = 20
     $completedBlocks = [Math]::Max(0, [Math]::Min($progressBarWidth, [int]($PercentComplete / (100 / $progressBarWidth))))
@@ -124,7 +115,7 @@ function Update-UscConsoleProgress {
         $cleanMessage = $cleanMessage.Substring(0, 47) + '...'
     }
     
-    $line = "`r  $frame  [$bar] $PercentComplete% | $cleanMessage"
+    $line = "`r  $spinner  [$bar] $PercentComplete% | $cleanMessage"
     $padLength = 110 - $line.Length
     if ($padLength -gt 0) {
         $line += ' ' * $padLength

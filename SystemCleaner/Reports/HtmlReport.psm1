@@ -61,9 +61,7 @@ function New-UscHtmlReport {
         ($Run.Finished - $Run.Started).ToString('mm\:ss')
     } else { '—' }
 
-    $dryRunBanner = if ($Run.WhatIfOnly) {
-        '<div class="banner dry-run">DRY RUN - no files were deleted. Toggle DryRunDefault in settings to run for real.</div>'
-    } else { '' }
+    $dryRunBanner = ''
 
     $driveRows = ''
     foreach ($before in @($Run.Before)) {
@@ -87,7 +85,6 @@ function New-UscHtmlReport {
         $statusClass = switch ($op.Status) {
             'Succeeded' { 'good' }
             'PartiallySucceeded' { 'warn' }
-            'Simulated' { 'sim' }
             'Failed' { 'bad' }
             default { 'neutral' }
         }
@@ -101,7 +98,7 @@ function New-UscHtmlReport {
 "@
     }
 
-    $totalLabel = if ($Run.WhatIfOnly) { 'Estimated Reclaimable' } else { 'Total Freed' }
+    $totalLabel = 'Total Freed'
 
     $html = @"
 <!DOCTYPE html>
@@ -114,14 +111,12 @@ function New-UscHtmlReport {
     h1 { color: #58a6ff; margin-bottom: 4px; }
     .meta { color: #8b949e; margin-bottom: 20px; }
     .banner { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; }
-    .dry-run { background: #3d2e00; color: #f0c14b; border: 1px solid #f0c14b; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
     th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #30363d; }
     th { background: #161b22; color: #58a6ff; }
     .good { color: #3fb950; }
     .warn { color: #d29922; }
     .bad { color: #f85149; }
-    .sim { color: #a371f7; }
     .neutral { color: #8b949e; }
     .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
     .stat { font-size: 1.4em; color: #3fb950; }

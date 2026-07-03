@@ -22,6 +22,9 @@ function Invoke-UscRecycleBinCleanup {
     param()
 
     $estimated = Get-UscRecycleBinSize
+    if ($estimated -eq 0) {
+        return New-UscOperationResult -Name 'Recycle Bin' -Category Clean -Status Skipped -Message 'Recycle bin is already empty' -BytesFreed 0
+    }
 
     try {
         if ($PSCmdlet.ShouldProcess('Recycle Bin', 'Clear recycle bin')) {

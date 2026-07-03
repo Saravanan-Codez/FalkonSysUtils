@@ -84,7 +84,7 @@ function Show-UscRunHistory {
     Write-Host ""
     Write-Host "  RUN HISTORY (Last $($runs.Count) runs)" -ForegroundColor Cyan
     Write-Host "  --------------------------------------------------" -ForegroundColor DarkGray
-    Write-Host ("  {0,-22} {1,-12} {2,-10} {3,-12} {4}" -f "Run ID", "Mode", "WhatIf", "Freed", "Status") -ForegroundColor DarkGray
+    Write-Host ("  {0,-22} {1,-12} {2,-12} {3}" -f "Run ID", "Mode", "Freed", "Status") -ForegroundColor DarkGray
 
     foreach ($run in $runs) {
         $freed = if ($run.TotalBytesFreed -ge 1GB)      { "{0:N2} GB" -f ($run.TotalBytesFreed / 1GB) }
@@ -92,11 +92,10 @@ function Show-UscRunHistory {
                  elseif ($run.TotalBytesFreed -ge 1KB)  { "{0:N2} KB" -f ($run.TotalBytesFreed / 1KB) }
                  else                                   { "$($run.TotalBytesFreed) B" }
 
-        $dryTag = if ($run.WhatIfOnly) { "Yes" } else { "No" }
         $statusTag = "[OK:$($run.SucceededOps) F:$($run.FailedOps) S:$($run.SkippedOps)]"
 
         $color = if ($run.FailedOps -gt 0) { 'Yellow' } else { 'Green' }
-        Write-Host ("  {0,-22} {1,-12} {2,-10} {3,-12} {4}" -f $run.RunId, $run.Mode, $dryTag, $freed, $statusTag) -ForegroundColor $color
+        Write-Host ("  {0,-22} {1,-12} {2,-12} {3}" -f $run.RunId, $run.Mode, $freed, $statusTag) -ForegroundColor $color
     }
     Write-Host "  --------------------------------------------------" -ForegroundColor DarkGray
 }

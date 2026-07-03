@@ -124,6 +124,21 @@ function New-UscRestorePoint {
         return New-UscOperationResult -Name 'Restore Point' -Category Checkpoint -Status Skipped -Message 'Administrator rights are required'
     }
 
+    $srRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore"
+    $registryValName = "SystemRestorePointCreationFrequency"
+    $originalVal = $null
+    $registryModified = $false
+
+    if (Test-Path -LiteralPath $srRegistryPath) {
+        $originalVal = (Get-ItemProperty -Path $srRegistryPath -Name $registryValName -ErrorAction SilentlyContinue).$registryValName
+        try {
+            Set-ItemProperty -Path $srRegistryPath -Name $registryValName -Value 0 -Type DWord -Force -ErrorAction Stop
+            $registryModified = $true
+        } catch {
+            Write-UscLog -Level Warning -Message 'Failed to temporarily adjust System Restore rate limit registry key.'
+        }
+    }
+
     try {
         Checkpoint-Computer -Description $Description -RestorePointType 'MODIFY_SETTINGS'
         return New-UscOperationResult -Name 'Restore Point' -Category Checkpoint -Status Succeeded -Message $Description
@@ -131,6 +146,17 @@ function New-UscRestorePoint {
     catch {
         Write-UscLog -Level Warning -Message 'Restore point creation failed (usually happens if restore points are disabled or another is running)' -Exception $_.Exception
         return New-UscOperationResult -Name 'Restore Point' -Category Checkpoint -Status Failed -Message $_.Exception.Message
+    }
+    finally {
+        if ($registryModified) {
+            try {
+                if ($null -eq $originalVal) {
+                    Remove-ItemProperty -Path $srRegistryPath -Name $registryValName -Force -ErrorAction SilentlyContinue
+                } else {
+                    Set-ItemProperty -Path $srRegistryPath -Name $registryValName -Value $originalVal -Type DWord -Force -ErrorAction Stop
+                }
+            } catch {}
+        }
     }
 }
 
@@ -397,13 +423,8 @@ function Show-UscResultsSummary {
 }
 
 function Show-UscLogo {
-    Write-Host '                 ___' -ForegroundColor Magenta
-    Write-Host '     \          /   \       ___  _   _     _  __  ___   _   _' -ForegroundColor Magenta
-    Write-Host '  ====\        /     \     | __|/ \ | |   | |/ / /   \ | \ | |' -ForegroundColor Magenta
-    Write-Host ' ======\______/   _   \    | _|/ _ \| |__ |   <  | () | |  \| |' -ForegroundColor DarkMagenta
-    Write-Host ' =======_        //\   >   |_|/_/ \_\____||_|\_\ \___/ |_|\___|' -ForegroundColor DarkMagenta
-    Write-Host '  ======/       //  \_/    F A L K O N   S Y S T E M   U T I L' -ForegroundColor Cyan
-    Write-Host '    ===/_______//' -ForegroundColor Cyan
+    Write-Host '==================================================' -ForegroundColor Cyan
+    Write-Host '               FALKON SYSTEM UTILS' -ForegroundColor White -BackgroundColor DarkBlue
     Write-Host '==================================================' -ForegroundColor Cyan
 }
 

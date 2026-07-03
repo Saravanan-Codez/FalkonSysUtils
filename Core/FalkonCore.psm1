@@ -3,19 +3,16 @@ function Show-FalkonLogo {
         [string]$SubTitle = ""
     )
     Clear-Host
-    Write-Host '      ___  _   _     _  __  ___   _   _' -ForegroundColor Magenta
-    Write-Host '     | __|/ \ | |   | |/ / /   \ | \ | |' -ForegroundColor Magenta
-    Write-Host '     | _|/ _ \| |__ |   <  | () | |  \| |' -ForegroundColor DarkMagenta
-    Write-Host '     |_|/_/ \_\____||_|\_\ \___/ |_|\___|' -ForegroundColor DarkMagenta
-    Write-Host '          F A L K O N   S Y S   U T I L S' -ForegroundColor Cyan
+    Write-Host '==================================================' -ForegroundColor Cyan
+    Write-Host '               FALKON SYSTEM UTILS' -ForegroundColor White -BackgroundColor DarkBlue
+    Write-Host '==================================================' -ForegroundColor Cyan
     
     if (-not [string]::IsNullOrWhiteSpace($SubTitle)) {
-        Write-Host '==================================================' -ForegroundColor Cyan
         $padLength = [math]::Max(0, (50 - $SubTitle.Length) / 2)
         $paddedTitle = $SubTitle.PadLeft($padLength + $SubTitle.Length).PadRight(50)
         Write-Host $paddedTitle -ForegroundColor White -BackgroundColor DarkMagenta
+        Write-Host '==================================================' -ForegroundColor Cyan
     }
-    Write-Host '==================================================' -ForegroundColor Cyan
 }
 
 function Invoke-FalkonPause {
@@ -34,7 +31,7 @@ function Backup-FalkonRegistryKey {
         if (-not (Test-Path $backupDir)) { New-Item -ItemType Directory -Path $backupDir -Force | Out-Null }
         
         # Format PS path (e.g. HKCU:\...) to reg.exe path (e.g. HKCU\...)
-        $regPath = $Path -replace '^HKLM:\\', 'HKLM\' -replace '^HKCU:\\', 'HKCU\' -replace '^HKLM:', 'HKLM' -replace '^HKCU:', 'HKCU'
+        $regPath = ($Path -replace '^HKLM:\\', 'HKLM\' -replace '^HKCU:\\', 'HKCU\' -replace '^HKLM:', 'HKLM' -replace '^HKCU:', 'HKCU') -replace '/', '\'
         
         $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
         $safeName = ($regPath -replace '[\\:*?"<>|]', '_')

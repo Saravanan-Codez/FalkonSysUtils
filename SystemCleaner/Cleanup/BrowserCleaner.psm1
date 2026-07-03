@@ -140,6 +140,23 @@ function Invoke-UscBrowserCacheCleanup {
             }
         }
 
+        # Deduplicate paths to prevent nested scanning and double-counting
+        $sortedPaths = @($pathsToScan) | Sort-Object Length
+        $finalPaths = [System.Collections.Generic.List[string]]::new()
+        foreach ($p in $sortedPaths) {
+            $isNested = $false
+            foreach ($existing in $finalPaths) {
+                if ($p.StartsWith($existing + [System.IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or $p -eq $existing) {
+                    $isNested = $true
+                    break
+                }
+            }
+            if (-not $isNested) {
+                $finalPaths.Add($p)
+            }
+        }
+        $pathsToScan = $finalPaths
+
         if ($pathsToScan.Count -eq 0) {
             $results.Add((New-UscOperationResult -Name $target.Name -Category Clean -Status Skipped -Message 'No cache directories exist' -Paths @($target.Path)))
             continue

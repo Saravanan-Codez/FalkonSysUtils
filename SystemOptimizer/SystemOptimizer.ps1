@@ -74,9 +74,15 @@ function Invoke-TelemetryNuke {
 
     try {
         if (Get-Command Backup-FalkonRegistryKey -ErrorAction SilentlyContinue) { Backup-FalkonRegistryKey -Path $regPath }
+        if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force -ErrorAction Stop | Out-Null }
         Set-ItemProperty -Path $regPath -Name "AllowTelemetry" -Value 0 -Type DWord -ErrorAction Stop
+        
         Stop-Service "DiagTrack" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
-        Set-Service "DiagTrack" -StartupType Disabled -ErrorAction Stop
+        Set-Service "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue
+        
+        Stop-Service "dmwappushservice" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+        Set-Service "dmwappushservice" -StartupType Disabled -ErrorAction SilentlyContinue
+        
         Write-Host "[+] Telemetry Nuked." -ForegroundColor Green
     } catch {
         Write-Host "[-] Failed to disable Telemetry: $($_.Exception.Message)" -ForegroundColor Red
